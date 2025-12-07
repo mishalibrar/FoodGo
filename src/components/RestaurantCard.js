@@ -9,6 +9,7 @@ import {
 import React from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { Pin, Star } from 'lucide-react-native';
+import { Colors, Fonts, FontSizes, Spacing, BorderRadius } from '../styles/globalStyles';
 
 const RestaurantCard = ({ data }) => {
   const navigation = useNavigation();
@@ -21,34 +22,43 @@ const RestaurantCard = ({ data }) => {
       keyExtractor={item => item.id}
       renderItem={({ item }) => (
         <TouchableOpacity
-          activeOpacity={0.9}
+          activeOpacity={0.8}
           onPress={() =>
             navigation.navigate('RestaurantDetailScreen', {
               restaurant: item,
             })
           }
+          style={styles.cardWrapper}
         >
           <View style={styles.container}>
-            <Image source={{ uri: item.imageUrl }} style={styles.image} />
-            <View style={{ paddingHorizontal: 10 }}>
-              <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.category}>{item.category}</Text>
+            <View style={styles.imageContainer}>
+              <Image 
+                source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/images/burgerbistro.jpg')} 
+                style={styles.image}
+                resizeMode="cover"
+              />
+            </View>
+            <View style={styles.contentContainer}>
+              <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
+              {item.category && (
+                <Text style={styles.category} numberOfLines={1}>{item.category}</Text>
+              )}
 
-              <View
-                style={{
-                  flexDirection: 'row',
-                  marginTop: 10,
-                  alignItems: 'center',
-                }}
-              >
-                <View style={styles.ratingRow}>
-                  <Star size={15} color="#FF7622" />
-                  <Text style={styles.rating}>{item.rating || 'N/A'}</Text>
-                </View>
-                <View style={{ flexDirection: 'row', marginLeft: 16 }}>
-                  <Pin size={15} color="#FF7622" />
-                  <Text style={styles.rating}>{item.location}</Text>
-                </View>
+              <View style={styles.infoRow}>
+                {item.rating && (
+                  <View style={styles.infoItem}>
+                    <Star size={16} color={Colors.primary} fill={Colors.primary} />
+                    <Text style={styles.infoText}>
+                      {typeof item.rating === 'number' ? item.rating.toFixed(1) : item.rating}
+                    </Text>
+                  </View>
+                )}
+                {item.location && (
+                  <View style={styles.infoItem}>
+                    <Pin size={16} color={Colors.primary} />
+                    <Text style={styles.infoText} numberOfLines={1}>{item.location}</Text>
+                  </View>
+                )}
               </View>
             </View>
           </View>
@@ -61,41 +71,60 @@ const RestaurantCard = ({ data }) => {
 export default RestaurantCard;
 
 const styles = StyleSheet.create({
+  cardWrapper: {
+    marginHorizontal: Spacing.xl,
+    marginBottom: Spacing.sm,
+  },
   container: {
-    alignItems: 'flex-start',
-    justifyContent: 'flex-start',
-    backgroundColor: '#F0F5FA',
-    padding: 5,
-    margin: 10,
-    borderRadius: 20,
-    paddingVertical: 13,
+    backgroundColor: Colors.backgroundLight,
+    borderRadius: BorderRadius.xl,
+    overflow: 'hidden',
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
     elevation: 5,
-    shadowRadius: 20,
+  },
+  imageContainer: {
+    width: '100%',
+    height: 180,
+    overflow: 'hidden',
   },
   image: {
-    width: 328,
-    height: 145,
-    borderRadius: 15,
-    backgroundColor: '#98A8B8',
+    width: '100%',
+    height: '100%',
+    backgroundColor: Colors.backgroundLoading,
+  },
+  contentContainer: {
+    padding: Spacing.lg,
+    paddingTop: Spacing.md,
   },
   name: {
-    fontFamily: 'Sen-Bold',
-    fontSize: 20,
-    color: '#181C2E',
-    marginTop: 9,
+    fontFamily: Fonts.bold,
+    fontSize: FontSizes.xxl,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.xs,
   },
   category: {
-    fontFamily: 'Sen-Medium',
-    fontSize: 14,
-    color: '#A0A5BA',
-    marginTop: 3,
+    fontFamily: Fonts.medium,
+    fontSize: FontSizes.md,
+    color: Colors.textLight,
+    marginBottom: Spacing.md,
   },
-  ratingRow: {
+  infoRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
   },
-  rating: {
-    fontFamily: 'Sen-Regular',
-    fontSize: 12,
-    marginLeft: 6,
+  infoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: Spacing.lg,
+    marginBottom: Spacing.xs,
+  },
+  infoText: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSizes.sm,
+    color: Colors.textSecondary,
   },
 });

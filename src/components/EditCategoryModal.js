@@ -6,13 +6,15 @@ import {
   TouchableOpacity,
   Alert,
   Image,
+  ScrollView,
 } from 'react-native';
 import Modal from 'react-native-modal';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import { X, Camera } from 'lucide-react-native';
 import firestore from '@react-native-firebase/firestore';
 import { launchImageLibrary } from 'react-native-image-picker';
 import CustomTextInput from './CustomTextInput';
 import CustomButton from './CustomButton';
+import { Colors, Fonts, FontSizes, Spacing, BorderRadius, Shadows } from '../styles/globalStyles';
 
 const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dkris2jqn/image/upload';
 const UPLOAD_PRESET = 'ml_default';
@@ -73,12 +75,13 @@ const EditCategoryModal = ({
   };
 
   const handleUpdate = async () => {
-    if (!categoryName) {
-      Alert.alert('Please enter a category name');
+    if (!categoryName.trim()) {
+      Alert.alert('Validation', 'Please enter a category name');
       return;
     }
 
     try {
+      setUploading(true);
       let imageUrl = await uploadImageToCloudinary();
 
       if (!imageUrl && existingCategory?.image) {
@@ -93,47 +96,94 @@ const EditCategoryModal = ({
         .collection('categories')
         .doc(categoryId)
         .update({
-          title: categoryName,
+          title: categoryName.trim(),
           image: imageUrl || null,
           updatedAt: firestore.FieldValue.serverTimestamp(),
         });
 
-      setImageUri(null);
+      setUploading(false);
       onClose();
     } catch (error) {
       console.error('Error updating category:', error);
+      Alert.alert('Error', 'Failed to update category. Please try again.');
+      setUploading(false);
     }
   };
 
   return (
-    <Modal isVisible={isVisible} onBackdropPress={onClose} style={styles.modal}>
+    <Modal 
+      isVisible={isVisible} 
+      onBackdropPress={onClose} 
+      style={styles.modal}
+      animationIn="slideInUp"
+      animationOut="slideOutDown"
+      backdropOpacity={0.5}
+    >
       <View style={styles.container}>
+        {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Edit Category</Text>
-          <TouchableOpacity onPress={onClose} style={styles.iconCircle}>
-            <Ionicons name="close" size={24} color="#000" />
+          <View style={styles.headerContent}>
+            <Text style={styles.title}>Edit Category</Text>
+            <Text style={styles.subtitle}>Update category details</Text>
+          </View>
+          <TouchableOpacity 
+            onPress={onClose} 
+            style={styles.closeButton}
+            activeOpacity={0.7}
+          >
+            <X size={20} color={Colors.textPrimary} strokeWidth={2.5} />
           </TouchableOpacity>
         </View>
 
-        {/* Input */}
-        <View style={{ alignItems: 'center' }}>
-          <CustomTextInput
-            name="Category Name"
-            value={categoryName}
-            setState={setCategoryName}
-            color="#676767"
-          />
-        </View>
+        <ScrollView 
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {/* Category Name Input */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Category Name</Text>
+            <CustomTextInput
+              name="e.g. Burgers, Pizza, Drinks"
+              value={categoryName}
+              setState={setCategoryName}
+              color={Colors.textTertiary}
+            />
+          </View>
 
-        {/* Image Picker */}
-        <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
-          {imageUri ? (
-            <Image source={{ uri: imageUri }} style={styles.preview} resizeMode='cover' />
-          ) : (
-            <Text style={{ color: '#676767' }}>Pick Category Image</Text>
-          )}
-        </TouchableOpacity>
+          {/* Image Upload */}
+          <View style={styles.imageSection}>
+            <Text style={styles.label}>Category Image</Text>
+            <TouchableOpacity 
+              style={[
+                styles.uploadBox,
+                imageUri && styles.uploadBoxFilled
+              ]} 
+              onPress={pickImage}
+              activeOpacity={0.8}
+            >
+              {imageUri ? (
+                <>
+                  <Image source={{ uri: imageUri }} style={styles.uploadedImage} />
+                  <View style={styles.imageOverlay}>
+                    <View style={styles.editBadge}>
+                      <Camera size={16} color={Colors.textWhite} strokeWidth={2} />
+                      <Text style={styles.editText}>Change Image</Text>
+                    </View>
+                  </View>
+                </>
+              ) : (
+                <View style={styles.placeholderContent}>
+                  <Camera size={48} color={Colors.textTertiary} strokeWidth={1.5} />
+                  <Text style={styles.placeholderText}>Tap to upload image</Text>
+                  <Text style={styles.placeholderHint}>Square image recommended</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
 
+        {/* Footer */}
         <View style={styles.footer}>
           <CustomButton
             title={uploading ? 'Updating...' : 'Update Category'}
@@ -149,32 +199,140 @@ const EditCategoryModal = ({
 export default EditCategoryModal;
 
 const styles = StyleSheet.create({
-  modal: { margin: 20, justifyContent: 'center' },
-  container: { backgroundColor: '#fff', padding: 20, borderRadius: 12 },
+  modal: { 
+    margin: 0, 
+    justifyContent: 'flex-end',
+  },
+  container: { 
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: BorderRadius.xxl,
+    borderTopRightRadius: BorderRadius.xxl,
+    flex: 0.9,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 15,
+    alignItems: 'flex-start',
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
-  title: { fontSize: 20, fontFamily: 'Sen-Bold' },
-  iconCircle: {
-    backgroundColor: '#ECF0F4',
-    width: 35,
-    height: 35,
+  headerContent: {
+    flex: 1,
+  },
+  title: { 
+    fontSize: FontSizes.xxl, 
+    fontFamily: Fonts.bold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.xs,
+    letterSpacing: 0.2,
+  },
+  subtitle: {
+    fontSize: FontSizes.sm,
+    fontFamily: Fonts.regular,
+    color: Colors.textTertiary,
+  },
+  closeButton: {
+    width: 36,
+    height: 36,
     borderRadius: 18,
+    backgroundColor: Colors.backgroundLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadows.small,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.md,
+  },
+  inputContainer: {
+    marginBottom: Spacing.lg,
+    width: '110%',
+  },
+  label: {
+    fontSize: FontSizes.md,
+    fontFamily: Fonts.semiBold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.sm,
+  },
+  imageSection: {
+    marginBottom: Spacing.lg,
+  },
+  uploadBox: {
+    width: '100%',
+    aspectRatio: 1,
+    backgroundColor: Colors.backgroundLight,
+    borderRadius: BorderRadius.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: Colors.border,
+    borderStyle: 'dashed',
+    position: 'relative',
+  },
+  uploadBoxFilled: {
+    borderColor: 'transparent',
+    borderStyle: 'solid',
+  },
+  uploadedImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  imageOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.xs,
+    ...Shadows.small,
+  },
+  editText: {
+    color: Colors.textWhite,
+    fontSize: FontSizes.sm,
+    fontFamily: Fonts.semiBold,
+  },
+  placeholderContent: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  footer: { marginTop: 20 },
-  imagePicker: {
-    marginTop: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    // padding: 10,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 10,
-    height: 200,
+  placeholderText: {
+    fontSize: FontSizes.md,
+    fontFamily: Fonts.semiBold,
+    color: Colors.textSecondary,
+    marginTop: Spacing.md,
   },
-  preview: { width: 100, height: 100, borderRadius: 10 },
+  placeholderHint: {
+    fontSize: FontSizes.sm,
+    fontFamily: Fonts.regular,
+    color: Colors.textTertiary,
+    marginTop: Spacing.xs,
+  },
+  footer: {
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xl,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    backgroundColor: Colors.background,
+  },
 });

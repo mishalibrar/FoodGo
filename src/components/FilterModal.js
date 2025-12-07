@@ -1,7 +1,7 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import React, { useState } from 'react';
 import Modal from 'react-native-modal';
-import Button from './Button';
+import CustomButton from './CustomButton';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 
 const FilterModal = ({ modalVisible, setModalVisible }) => {
@@ -311,7 +311,7 @@ const FilterModal = ({ modalVisible, setModalVisible }) => {
           </TouchableOpacity>
         </View>
         {/* Filter Button */}
-        <Button title={'FILTER'} />
+        <CustomButton title={'FILTER'} onPress={() => setModalVisible(false)} />
       </View>
     </Modal>
   );

@@ -9,22 +9,29 @@ import {
   ScrollView,
 } from 'react-native';
 import React, { useState, useEffect } from 'react';
-import Entypo from 'react-native-vector-icons/Entypo';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import Feather from 'react-native-vector-icons/Feather';
+import { Star, Truck, Clock, ArrowLeft, MoreVertical, Heart, Utensils } from 'lucide-react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import BurgerFlatlist from '../components/BurgerFlatlist';
 import firestore from '@react-native-firebase/firestore';
-import { Pin } from 'lucide-react-native';
+import { Colors, Fonts, FontSizes, Spacing, BorderRadius, Shadows } from '../styles/globalStyles';
+import { useFavorites } from '../context/FavoritesContext';
+import { useAlert } from '../context/AlertContext';
 
 const RestaurantDetailScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { restaurant } = route.params;
+  const { isRestaurantFavorite, toggleRestaurantFavorite } = useFavorites();
+  const { showAlert } = useAlert();
 
   const [categories, setCategories] = useState([]);
   const [checked, setChecked] = useState(null);
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState('');
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  
+  const isFavorite = isRestaurantFavorite(restaurant.id);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -88,202 +95,429 @@ const RestaurantDetailScreen = () => {
     fetchItems();
   }, [checked]);
 
-  if (loading) {
+  // Create array of images for carousel (using restaurant image as placeholder)
+  const images = restaurant.imageUrl 
+    ? [restaurant.imageUrl] 
+    : [require('../assets/images/burgerbistro.jpg')];
+
+  if (loading && categories.length === 0) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#FF7622" />
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={styles.loadingText}>Loading restaurant details...</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: 'white' }}>
-      {/* Header */}
-      <View style={styles.container}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.8}
-        >
-          <View style={styles.feathericon}>
-            <Entypo name="chevron-small-left" color="#181C2E" size={23} />
-          </View>
-        </TouchableOpacity>
-      </View>
+    <View style={styles.container}>
+      {/* Header with Image - Behind Content */}
+      <View style={styles.imageContainer}>
+        <Image
+          source={typeof images[currentImageIndex] === 'string' 
+            ? { uri: images[currentImageIndex] } 
+            : images[currentImageIndex]}
+          style={styles.restaurantImage}
+          resizeMode="cover"
+        />
+        
+        {/* Gradient Overlay */}
+        <LinearGradient
+          colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.6)']}
+          style={styles.gradientOverlay}
+        />
 
-      {/* Restaurant Image */}
-      <Image
-        source={{ uri: restaurant.imageUrl }}
-        style={styles.FlatListimgstyle}
-        resizeMode="cover"
-      />
-
-      {/* Restaurant Info */}
-      <Text style={styles.restaurantname}>{restaurant.name}</Text>
-      <View style={styles.ratingdelieverytime}>
-        <View style={styles.iconview}>
-          <Feather name="star" size={18} color="#FF7622" />
-          <Text style={styles.ratingsstyle}>{restaurant.rating || 'N/A'}</Text>
-          <View style={{ flexDirection: 'row', marginLeft: 16 }}>
-            <Pin size={18} color="#FF7622" />
-            <Text style={styles.ratingsstyle}>{restaurant.location}</Text>
-          </View>
+        {/* Header Buttons */}
+        <View style={styles.headerContainer}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <View style={styles.headerButton}>
+              <ArrowLeft size={22} color={Colors.textWhite} strokeWidth={2.5} />
+            </View>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            onPress={() => {
+              const wasFavorite = isRestaurantFavorite(restaurant.id);
+              toggleRestaurantFavorite(restaurant);
+              
+              if (!wasFavorite) {
+                showAlert('Success', `${restaurant.name} added to favorites!`, [], 'success');
+              } else {
+                showAlert('Removed', `${restaurant.name} removed from favorites`, [], 'info');
+              }
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.headerButton, isFavorite && styles.favoriteButtonActive]}>
+              <Heart 
+                size={22} 
+                color={isFavorite ? Colors.textWhite : Colors.textWhite}
+                fill={isFavorite ? Colors.textWhite : 'none'}
+                strokeWidth={isFavorite ? 0 : 2.5}
+              />
+            </View>
+          </TouchableOpacity>
         </View>
-      </View>
 
-      <Text style={styles.detailstextstyle}>
-        {restaurant.details || 'No description available.'}
-      </Text>
-
-      <Text style={styles.Categoriestextstyle}>Categories:</Text>
-
-      <FlatList
-        data={categories}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        renderItem={({ item }) => {
-          const isChecked = item.id === checked;
-          return (
-            <TouchableOpacity onPress={() => setChecked(item.id)}>
+        {/* Pagination Dots */}
+        {images.length > 1 && (
+          <View style={styles.paginationContainer}>
+            {images.map((_, index) => (
               <View
+                key={index}
                 style={[
-                  styles.categoryBtn,
-                  { backgroundColor: isChecked ? '#F58D1D' : 'white' },
+                  styles.paginationDot,
+                  index === currentImageIndex && styles.paginationDotActive,
                 ]}
-              >
-                <Image
-                  source={{ uri: item.image }}
-                  style={styles.FlatListimagestyle}
-                  resizeMode="cover"
-                />
-                <Text
-                  style={[
-                    styles.categoryText,
-                    { color: isChecked ? '#fff' : '#181C2E' },
-                  ]}
-                >
-                  {item.title}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          );
-        }}
-        keyExtractor={item => item.id}
-        contentContainerStyle={{ paddingHorizontal: 18 }}
-      />
-
-      {/* Items inside selected category */}
-      <View>
-        {checked ? (
-          <>
-            <Text style={styles.Categoriestextstyle}>
-              {categories.find(cat => cat.id === checked)?.title} (
-              {items.length})
-            </Text>
-            <BurgerFlatlist
-              categoryId={checked}
-              restaurantId={restaurant.id}
-              adminId={restaurant.adminId}
-            />
-          </>
-        ) : (
-          <Text style={styles.emptyText}>Select a category to view items</Text>
+              />
+            ))}
+          </View>
         )}
       </View>
-    </ScrollView>
+
+      {/* Scrollable Content */}
+      <ScrollView 
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Restaurant Info Section */}
+        <View style={styles.infoCard}>
+          <View style={styles.infoRow}>
+            {restaurant.rating && (
+              <View style={styles.infoBadge}>
+                <Star size={18} color={Colors.primary} fill={Colors.primary} />
+                <Text style={styles.infoBadgeText}>
+                  {typeof restaurant.rating === 'number' ? restaurant.rating.toFixed(1) : restaurant.rating}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          <Text style={styles.restaurantName}>{restaurant.name}</Text>
+
+          {restaurant.details && (
+            <Text style={styles.descriptionText}>
+              {restaurant.details}
+            </Text>
+          )}
+        </View>
+
+        {/* Categories Section */}
+        {categories.length > 0 && (
+          <View style={styles.categoriesSection}>
+            <View style={styles.categoriesHeader}>
+              <Utensils size={20} color={Colors.textPrimary} />
+              <Text style={styles.categoriesTitle}>Categories</Text>
+            </View>
+            <FlatList
+              data={categories}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              renderItem={({ item }) => {
+                const isChecked = item.id === checked;
+                return (
+                  <TouchableOpacity 
+                    onPress={() => setChecked(item.id)}
+                    activeOpacity={0.8}
+                  >
+                    <View
+                      style={[
+                        styles.categoryButton,
+                        isChecked && styles.categoryButtonActive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.categoryText,
+                          isChecked && styles.categoryTextActive,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {item.title}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              }}
+              keyExtractor={item => item.id}
+              contentContainerStyle={styles.categoriesList}
+            />
+          </View>
+        )}
+
+        {/* Items Section */}
+        <View style={styles.itemsSection}>
+          {checked ? (
+            <>
+              <View style={styles.itemsHeader}>
+                <Text style={styles.itemsSectionTitle}>
+                  {categories.find(cat => cat.id === checked)?.title || 'Menu Items'} ({items.length || 0})
+                </Text>
+              </View>
+              {loading ? (
+                <View style={styles.itemsLoadingContainer}>
+                  <ActivityIndicator size="large" color={Colors.primary} />
+                  <Text style={styles.itemsLoadingText}>Loading menu items...</Text>
+                </View>
+              ) : (
+                <BurgerFlatlist
+                  categoryId={checked}
+                  restaurantId={restaurant.id}
+                  adminId={restaurant.adminId}
+                  restaurantName={restaurant.name}
+                />
+              )}
+            </>
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>Select a category to view items</Text>
+            </View>
+          )}
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
 export default RestaurantDetailScreen;
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  scrollView: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    marginTop: 280,
+  },
+  scrollContent: {
+    paddingBottom: Spacing.xxl,
+  },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: Colors.background,
   },
-  container: {
-    padding: 20,
-    flexDirection: 'row',
-    zIndex: 1,
+  loadingText: {
+    marginTop: Spacing.md,
+    fontFamily: Fonts.regular,
+    fontSize: FontSizes.md,
+    color: Colors.textTertiary,
+  },
+  imageContainer: {
+    width: '100%',
+    height: 280,
     position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.backgroundSecondary,
   },
-  feathericon: {
-    backgroundColor: '#ECF0F4',
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+  restaurantImage: {
+    width: '100%',
+    height: '100%',
+  },
+  gradientOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '60%',
+  },
+  headerContainer: {
+    position: 'absolute',
+    top: Spacing.xl + 8,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+    zIndex: 10,
+  },
+  headerButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 7,
-  },
-  FlatListimgstyle: {
-    width: '100%',
-    height: 260,
-    borderBottomLeftRadius: 25,
-    borderBottomRightRadius: 25,
-  },
-  iconview: {
-    flexDirection: 'row',
-    margin: 10,
-  },
-  ratingsstyle: {
-    fontFamily: 'Sen-Regular',
-    fontSize: 14,
-    marginLeft: 5,
-  },
-  ratingdelieverytime: {
-    flexDirection: 'row',
-    paddingHorizontal: 5,
-  },
-  restaurantname: {
-    fontFamily: 'Sen-Bold',
-    fontSize: 24,
-    marginLeft: 15,
-    marginTop: 20,
-    color: '#181C2E',
-  },
-  detailstextstyle: {
-    fontFamily: 'Sen-Regular',
-    fontSize: 16,
-    lineHeight: 22,
-    marginHorizontal: 15,
-    color: '#A0A5BA',
-    marginVertical: 0,
-  },
-  Categoriestextstyle: {
-    fontFamily: 'Sen-Bold',
-    fontSize: 18,
-    color: '#32343E',
-    marginVertical: 10,
-    paddingHorizontal: 15,
-  },
-  categoryBtn: {
     borderWidth: 1,
-    borderColor: '#EDEDED',
-    alignItems: 'center',
-    borderRadius: 40,
-    paddingVertical: 2,
-    marginHorizontal: 5,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  
+  },
+  favoriteButtonActive: {
+    backgroundColor:'rgba(255, 255, 255, 0.25)',
+  },
+  paginationContainer: {
+    position: 'absolute',
+    bottom: Spacing.lg,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
-    paddingHorizontal: 2,
-    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    zIndex: 10,
+  },
+  paginationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  paginationDotActive: {
+    backgroundColor: Colors.textWhite,
+    width: 28,
+    height: 8,
+  },
+  infoCard: {
+    backgroundColor: Colors.background,
+    marginTop: -10,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.xl + Spacing.md,
+    paddingBottom: Spacing.xl,
+    zIndex: 10,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  infoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.backgroundLight,
+    paddingHorizontal: Spacing.md + Spacing.xs,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    ...Shadows.small,
+  },
+  infoBadgeText: {
+    fontFamily: Fonts.bold,
+    fontSize: FontSizes.md,
+    color: Colors.textPrimary,
+  },
+  infoBadgeTextSecondary: {
+    fontFamily: Fonts.medium,
+    fontSize: FontSizes.sm,
+    color: Colors.textSecondary,
+  },
+  restaurantName: {
+    fontFamily: Fonts.bold,
+    fontSize: FontSizes.xxxl + 2,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.md,
+    letterSpacing: 0.3,
+    lineHeight: 38,
+    marginTop: Spacing.md,
+  },
+  descriptionText: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSizes.md,
+    lineHeight: 24,
+    color: Colors.textTertiary,
+    marginTop: Spacing.xs,
+    letterSpacing: 0.1,
+  },
+  categoriesSection: {
+    paddingVertical: Spacing.lg,
+    backgroundColor: Colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  categoriesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.xl,
+    marginBottom: Spacing.md,
+  },
+  categoriesTitle: {
+    fontFamily: Fonts.bold,
+    fontSize: FontSizes.xl,
+    color: Colors.textPrimary,
+    letterSpacing: 0.2,
+  },
+  categoriesList: {
+    paddingHorizontal: Spacing.xl,
+  },
+  categoryButton: {
+    backgroundColor: Colors.backgroundLight,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    borderRadius: BorderRadius.full,
+    paddingVertical: Spacing.md + Spacing.xs,
+    paddingHorizontal: Spacing.lg,
+    marginRight: Spacing.md,
+    minWidth: 90,
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+    ...Shadows.small,
+  },
+  categoryButtonActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+    transform: [{ scale: 1.05 }],
+    ...Shadows.medium,
   },
   categoryText: {
-    fontFamily: 'Sen-Regular',
-    fontSize: 16,
+    fontFamily: Fonts.semiBold,
+    fontSize: FontSizes.md,
+    color: Colors.textPrimary,
+    letterSpacing: 0.2,
+  },
+  categoryTextActive: {
+    color: Colors.textWhite,
+    fontFamily: Fonts.bold,
+  },
+  itemsSection: {
+    paddingTop: Spacing.lg,
+    backgroundColor: Colors.background,
+  },
+  itemsHeader: {
+    paddingHorizontal: Spacing.xl,
+    marginBottom: Spacing.lg + Spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  itemsSectionTitle: {
+    fontFamily: Fonts.bold,
+    fontSize: FontSizes.xxl + 2,
+    color: Colors.textPrimary,
+    letterSpacing: 0.3,
+    flex: 1,
+  },
+  itemsLoadingContainer: {
+    paddingVertical: Spacing.xxxl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  itemsLoadingText: {
+    marginTop: Spacing.md,
+    fontFamily: Fonts.regular,
+    fontSize: FontSizes.md,
+    color: Colors.textTertiary,
+  },
+  emptyState: {
+    paddingVertical: Spacing.xxxl,
+    paddingHorizontal: Spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyText: {
-    fontFamily: 'Sen-Regular',
-    fontSize: 16,
-    color: '#888',
+    fontFamily: Fonts.regular,
+    fontSize: FontSizes.md,
+    color: Colors.textTertiary,
     textAlign: 'center',
-    marginTop: 15,
-  },
-  FlatListimagestyle: {
-    width: 40,
-    height: 40,
-    borderRadius: 23,
-    backgroundColor: '#ECF0F4',
-    margin: 6,
   },
 });

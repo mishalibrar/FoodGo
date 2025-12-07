@@ -11,7 +11,6 @@ const ProfileScreen = () => {
     const fetchUser = async () => {
       try {
         const user = auth().currentUser;
-        console.log('Logged in UID:', user?.uid);
 
         if (!user) return;
 
@@ -21,7 +20,6 @@ const ProfileScreen = () => {
           .get();
 
         const userData = userDoc.data();
-        console.log('User doc data:', userData);
 
         if (userData?.name) {
           setUserName(userData.name);
@@ -34,13 +32,12 @@ const ProfileScreen = () => {
           .get();
 
         const adminData = adminDoc.data();
-        console.log('Admin doc data:', adminData);
 
         if (adminData?.name) {
           setUserName(adminData.name);
         }
       } catch (err) {
-        console.log('Error fetching profile:', err);
+        console.error('Error fetching profile:', err);
       }
     };
 
@@ -48,8 +45,11 @@ const ProfileScreen = () => {
   }, []);
 
   const handleSignOut = async () => {
-    await auth().signOut();
-    console.log('Signed Out & Token Removed');
+    try {
+      await auth().signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   return (

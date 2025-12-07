@@ -1,16 +1,18 @@
-import { Alert, Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import React, { useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import CustomTextInput from '../components/CustomTextInput';
 import CustomButton from '../components/CustomButton';
+import { useAlert } from '../context/AlertContext';
 
 const ForgotPassword = () => {
   const navigation = useNavigation();
+  const { showAlert } = useAlert();
   const [email, setEmail] = useState('');
 
   const saveInfo = () => {
     if (!email.endsWith('@gmail.com')) {
-      Alert.alert('Email not valid must ends with @gmail.com');
+      showAlert('Email not valid must ends with @gmail.com');
     } else {
       navigation.replace('Verification');
     }
@@ -29,19 +31,19 @@ const ForgotPassword = () => {
         </Text>
       </View>
       <View style={styles.whiteblockstyle}>
-        <View style={{margin:5}}>
-        <Text style={styles.emailtextstyle}>EMAIL</Text>
-        <View style={{ alignItems: 'center' }}>
-          <CustomTextInput
-            name="example@gmail.com"
-            color="#676767"
-            setState={setEmail}
-            keyboardType={'email-address'}
-          />
-        </View>
-        <View>
-          <CustomButton title="SEND CODE" onPress={saveInfo} />
-        </View>
+        <View style={{ margin: 5 }}>
+          <Text style={styles.emailtextstyle}>EMAIL</Text>
+          <View style={{ alignItems: 'center' }}>
+            <CustomTextInput
+              name="example@gmail.com"
+              color="#676767"
+              setState={setEmail}
+              keyboardType={'email-address'}
+            />
+          </View>
+          <View>
+            <CustomButton title="SEND CODE" onPress={saveInfo} style={{ width: '90%', alignSelf: 'center', justifyContent: 'center', alignItems: 'center' }} />
+          </View>
         </View>
       </View>
     </View>

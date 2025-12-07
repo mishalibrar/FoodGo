@@ -1,30 +1,63 @@
-import { StyleSheet, Text, View, TouchableOpacity, Image, FlatList } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Image, FlatList, Dimensions } from 'react-native';
 import React from 'react';
+import { useNavigation } from '@react-navigation/native';
+import { Colors, Fonts, FontSizes, Spacing, BorderRadius, Shadows } from '../styles/globalStyles';
 
-const PopularFood = ( {data }) => {
+const { width } = Dimensions.get('window');
+const CARD_WIDTH = (width - Spacing.xl * 2 - Spacing.md) / 2;
+
+const PopularFood = ({ data }) => {
+  const navigation = useNavigation();
+
+  const handlePress = (item) => {
+    if (item.item) {
+      const itemData = item.item;
+      // Navigate to product detail screen with proper data structure
+      navigation.navigate('ProductDetailScreen', {
+        adminId: itemData.adminId,
+        restaurantId: itemData.restaurantId,
+        categoryId: itemData.categoryId,
+        itemId: itemData.id,
+        itemData: itemData,
+      });
+    }
+  };
+
   return (
     <View style={styles.container}>
       <FlatList
         data={data}
         numColumns={2}
         scrollEnabled={false}
+        contentContainerStyle={styles.listContent}
+        columnWrapperStyle={styles.row}
         renderItem={({ item }) => (
-          <TouchableOpacity>
-            <View style={styles.parentview}>
-              <View style={{ zIndex: 1, top: 20 }}>
+          <TouchableOpacity 
+            onPress={() => handlePress(item)}
+            activeOpacity={0.8}
+            style={styles.cardWrapper}
+          >
+            <View style={styles.card}>
+              <View style={styles.imageContainer}>
                 <Image
                   source={item.img}
                   resizeMode="cover"
-                  style={{ width: 130, height: 100, borderRadius: 15 }}
+                  style={styles.image}
+                  defaultSource={require('../assets/images/pizza.png')}
                 />
               </View>
-              <View style={styles.parenttext}>
-                <Text style={styles.productname}>{item.title}</Text>
-                <Text style={styles.restauranttext}>{item.restaurant}</Text>
+              <View style={styles.contentContainer}>
+                <Text style={styles.productName} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <Text style={styles.restaurantText} numberOfLines={1}>
+                  {item.restaurant}
+                </Text>
               </View>
             </View>
           </TouchableOpacity>
         )}
+        keyExtractor={(item, index) => `popular-food-${item.id || index}`}
       />
     </View>
   );
@@ -33,30 +66,55 @@ const PopularFood = ( {data }) => {
 export default PopularFood;
 
 const styles = StyleSheet.create({
-  container: { margin: 7 },
-  parentview: {
+  container: {
+    paddingHorizontal: Spacing.xl,
+  },
+  listContent: {
+    paddingBottom: Spacing.md,
+  },
+  row: {
+    justifyContent: 'space-between',
+  },
+  cardWrapper: {
+    width: CARD_WIDTH,
+    marginBottom: Spacing.lg,
+  },
+  card: {
+    backgroundColor: Colors.backgroundLight,
+    borderRadius: BorderRadius.xl,
+    overflow: 'hidden',
+    ...Shadows.medium,
+  },
+  imageContainer: {
     width: '100%',
-    margin: 9,
+    height: 120,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 15,
+    paddingTop: Spacing.md,
   },
-  parenttext: {
+  image: {
+    width: CARD_WIDTH - Spacing.md * 2,
+    height: 100,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.backgroundSecondary,
+  },
+  contentContainer: {
     alignItems: 'center',
-    elevation: 9,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    paddingTop: 25,
-    padding: 10,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.md,
+    paddingHorizontal: Spacing.sm,
   },
-  productname: {
-    fontFamily: 'Sen-Bold',
-    fontSize: 14,
-    color: '#32343E',
+  productName: {
+    fontFamily: Fonts.bold,
+    fontSize: FontSizes.md,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.xs,
+    textAlign: 'center',
   },
-  restauranttext: {
-    fontFamily: 'Sen-Regular',
-    fontSize: 12,
-    color: '#646982',
+  restaurantText: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSizes.sm,
+    color: Colors.textTertiary,
+    textAlign: 'center',
   },
 });

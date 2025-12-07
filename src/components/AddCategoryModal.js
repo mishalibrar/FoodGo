@@ -1,165 +1,322 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-  Image,
-} from 'react-native';
-import Modal from 'react-native-modal';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import firestore from '@react-native-firebase/firestore';
-import { launchImageLibrary } from 'react-native-image-picker';
-import CustomTextInput from './CustomTextInput';
-import CustomButton from './CustomButton';
+  import React, { useState } from 'react';
+  import {
+    View,
+    Text,
+    StyleSheet,
+    TouchableOpacity,
+    Alert,
+    Image,
+    ScrollView,
+  } from 'react-native';
+  import Modal from 'react-native-modal';
+  import { X, Camera } from 'lucide-react-native';
+  import firestore from '@react-native-firebase/firestore';
+  import { launchImageLibrary } from 'react-native-image-picker';
+  import CustomTextInput from './CustomTextInput';
+  import CustomButton from './CustomButton';
+  import { Colors, Fonts, FontSizes, Spacing, BorderRadius, Shadows } from '../styles/globalStyles';
 
-const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dkris2jqn/image/upload';
-const UPLOAD_PRESET = 'ml_default';
+  const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dkris2jqn/image/upload';
+  const UPLOAD_PRESET = 'ml_default';
 
-const AddCategoryModal = ({ isVisible, onClose, adminUid, restaurantId }) => {
-  const [categoryName, setCategoryName] = useState('');
-  const [imageUri, setImageUri] = useState(null);
-  const [uploading, setUploading] = useState(false);
+  const AddCategoryModal = ({ isVisible, onClose, adminUid, restaurantId }) => {
+    const [categoryName, setCategoryName] = useState('');
+    const [imageUri, setImageUri] = useState(null);
+    const [uploading, setUploading] = useState(false);
 
-  // Pick Image
-  const pickImage = async () => {
-    const result = await launchImageLibrary({ mediaType: 'photo' });
-    if (result.assets && result.assets.length > 0) {
-      setImageUri(result.assets[0].uri);
-    }
-  };
+    // Pick Image
+    const pickImage = async () => {
+      const result = await launchImageLibrary({ mediaType: 'photo' });
+      if (result.assets && result.assets.length > 0) {
+        setImageUri(result.assets[0].uri);
+      }
+    };
 
-  // Upload to Cloudinary
-  const uploadImageToCloudinary = async () => {
-    if (!imageUri) return null;
+    // Upload to Cloudinary
+    const uploadImageToCloudinary = async () => {
+      if (!imageUri) return null;
 
-    setUploading(true);
-    const data = new FormData();
-    data.append('file', {
-      uri: imageUri,
-      type: 'image/jpeg',
-      name: 'upload.jpg',
-    });
-    data.append('upload_preset', UPLOAD_PRESET);
-
-    try {
-      let res = await fetch(CLOUDINARY_URL, {
-        method: 'POST',
-        body: data,
+      setUploading(true);
+      const data = new FormData();
+      data.append('file', {
+        uri: imageUri,
+        type: 'image/jpeg',
+        name: 'upload.jpg',
       });
-      let json = await res.json();
-      setUploading(false);
-      return json.secure_url;
-    } catch (error) {
-      console.error('Cloudinary Upload Error:', error);
-      setUploading(false);
-      return null;
-    }
-  };
+      data.append('upload_preset', UPLOAD_PRESET);
 
-  // Save Category
-  const handleSave = async () => {
-    if (!categoryName) {
-      Alert.alert('Please enter a category name');
-      return;
-    }
-
-    try {
-      let imageUrl = await uploadImageToCloudinary();
-
-      await firestore()
-        .collection('admins')
-        .doc(adminUid)
-        .collection('restaurants')
-        .doc(restaurantId)
-        .collection('categories')
-        .add({
-          title: categoryName,
-          image: imageUrl || null,
-          createdAt: firestore.FieldValue.serverTimestamp(),
+      try {
+        let res = await fetch(CLOUDINARY_URL, {
+          method: 'POST',
+          body: data,
         });
+        let json = await res.json();
+        setUploading(false);
+        return json.secure_url;
+      } catch (error) {
+        console.error('Cloudinary Upload Error:', error);
+        setUploading(false);
+        return null;
+      }
+    };
 
-      setCategoryName('');
-      setImageUri(null);
-      onClose();
-    } catch (error) {
-      console.error('Error adding category:', error);
-    }
+    // Save Category
+    const handleSave = async () => {
+      if (!categoryName.trim()) {
+        Alert.alert('Validation', 'Please enter a category name');
+        return;
+      }
+
+      try {
+        setUploading(true);
+        let imageUrl = await uploadImageToCloudinary();
+
+        await firestore()
+          .collection('admins')
+          .doc(adminUid)
+          .collection('restaurants')
+          .doc(restaurantId)
+          .collection('categories')
+          .add({
+            title: categoryName.trim(),
+            image: imageUrl || null,
+            createdAt: firestore.FieldValue.serverTimestamp(),
+          });
+
+        setCategoryName('');
+        setImageUri(null);
+        setUploading(false);
+        onClose();
+      } catch (error) {
+        console.error('Error adding category:', error);
+        Alert.alert('Error', 'Failed to add category. Please try again.');
+        setUploading(false);
+      }
+    };
+
+    return (
+      <Modal 
+        isVisible={isVisible} 
+        onBackdropPress={onClose} 
+        style={styles.modal}
+        animationIn="slideInUp"
+        animationOut="slideOutDown"
+        backdropOpacity={0.5}
+      >
+        <View style={styles.container}>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.headerContent}>
+              <Text style={styles.title}>Add Category</Text>
+              <Text style={styles.subtitle}>Create a new menu category</Text>
+            </View>
+            <TouchableOpacity 
+              onPress={onClose} 
+              style={styles.closeButton}
+              activeOpacity={0.7}
+            >
+              <X size={20} color={Colors.textPrimary} strokeWidth={2.5} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView 
+            style={styles.scrollView}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
+            {/* Category Name Input */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Category Name</Text>
+              <CustomTextInput
+                name="e.g. Burgers, Pizza, Drinks"
+                value={categoryName}
+                setState={setCategoryName}
+                color={Colors.textTertiary}
+              />
+            </View>
+
+            {/* Image Upload */}
+            <View style={styles.imageSection}>
+              <Text style={styles.label}>Category Image</Text>
+              <TouchableOpacity 
+                style={[
+                  styles.uploadBox,
+                  imageUri && styles.uploadBoxFilled
+                ]} 
+                onPress={pickImage}
+                activeOpacity={0.8}
+              >
+                {imageUri ? (
+                  <>
+                    <Image source={{ uri: imageUri }} style={styles.uploadedImage} />
+                    <View style={styles.imageOverlay}>
+                      <View style={styles.editBadge}>
+                        <Camera size={16} color={Colors.textWhite} strokeWidth={2} />
+                        <Text style={styles.editText}>Change Image</Text>
+                      </View>
+                    </View>
+                  </>
+                ) : (
+                  <View style={styles.placeholderContent}>
+                    <Camera size={48} color={Colors.textTertiary} strokeWidth={1.5} />
+                    <Text style={styles.placeholderText}>Tap to upload image</Text>
+                    <Text style={styles.placeholderHint}>Square image recommended</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+
+          {/* Footer */}
+          <View style={styles.footer}>
+            <CustomButton
+              title={uploading ? 'Uploading...' : 'Save Category'}
+              onPress={handleSave}
+              disabled={uploading}
+            />
+          </View>
+        </View>
+      </Modal>
+    );
   };
 
-  return (
-    <Modal isVisible={isVisible} onBackdropPress={onClose} style={styles.modal}>
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Add Category</Text>
-          <TouchableOpacity onPress={onClose} style={styles.iconCircle}>
-            <Ionicons name="close" size={24} color="#000" />
-          </TouchableOpacity>
-        </View>
+  export default AddCategoryModal;
 
-        {/* Input */}
-        <View style={{ alignItems: 'center' }}>
-          <CustomTextInput
-            name="e.g. Burgers, Pizza, Drinks"
-            value={categoryName}
-            setState={setCategoryName}
-            color="#676767"
-          />
-        </View>
-
-        {/* Pick Image */}
-        <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
-          {imageUri ? (
-            <Image source={{ uri: imageUri }} style={styles.preview} />
-          ) : (
-            <Text style={{ color: '#676767' }}>Pick Category Image</Text>
-          )}
-        </TouchableOpacity>
-
-        {/* Save */}
-        <View style={styles.footer}>
-          <CustomButton
-            title={uploading ? 'Uploading...' : 'Save Category'}
-            onPress={handleSave}
-            disabled={uploading}
-          />
-        </View>
-      </View>
-    </Modal>
-  );
-};
-
-export default AddCategoryModal;
-
-const styles = StyleSheet.create({
-  modal: { margin: 20, justifyContent: 'center' },
-  container: { backgroundColor: '#fff', padding: 20, borderRadius: 12 },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 15,
-  },
-  title: { fontSize: 20, fontFamily: 'Sen-Bold' },
-  iconCircle: {
-    backgroundColor: '#ECF0F4',
-    width: 35,
-    height: 35,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  footer: { marginTop: 20 },
-  imagePicker: {
-    marginTop: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    // padding: 20,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 10,
-    marginHorizontal:18,
-    height:200
-  },
-  preview: { width: 100, height: 100, },
-});
+  const styles = StyleSheet.create({
+    modal: { 
+      margin: 0, 
+      justifyContent: 'flex-end',
+    },
+    container: { 
+      backgroundColor: Colors.background,
+      borderTopLeftRadius: BorderRadius.xxl,
+      borderTopRightRadius: BorderRadius.xxl,
+      flex: 0.9,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      paddingHorizontal: Spacing.xl,
+      paddingTop: Spacing.xl,
+      paddingBottom: Spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: Colors.border,
+    },
+    headerContent: {
+      flex: 1,
+    },
+    title: { 
+      fontSize: FontSizes.xxl, 
+      fontFamily: Fonts.bold,
+      color: Colors.textPrimary,
+      marginBottom: Spacing.xs,
+      letterSpacing: 0.2,
+    },
+    subtitle: {
+      fontSize: FontSizes.sm,
+      fontFamily: Fonts.regular,
+      color: Colors.textTertiary,
+    },
+    closeButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: Colors.backgroundLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...Shadows.small,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingHorizontal: Spacing.xl,
+      paddingTop: Spacing.lg,
+      paddingBottom: Spacing.md,
+    },
+    inputContainer: {
+      marginBottom: Spacing.lg,
+      width: '110%',
+    },
+    label: {
+      fontSize: FontSizes.md,
+      fontFamily: Fonts.semiBold,
+      color: Colors.textPrimary,
+      marginBottom: Spacing.sm,
+    },
+    imageSection: {
+      marginBottom: Spacing.lg,
+    },
+    uploadBox: {
+      width: '100%',
+      aspectRatio: 1,
+      backgroundColor: Colors.backgroundLight,
+      borderRadius: BorderRadius.lg,
+      justifyContent: 'center',
+      alignItems: 'center',
+      overflow: 'hidden',
+      borderWidth: 2,
+      borderColor: Colors.border,
+      borderStyle: 'dashed',
+      position: 'relative',
+    },
+    uploadBoxFilled: {
+      borderColor: 'transparent',
+      borderStyle: 'solid',
+    },
+    uploadedImage: {
+      width: '100%',
+      height: '100%',
+      resizeMode: 'cover',
+    },
+    imageOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.4)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    editBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: Colors.primary,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      borderRadius: BorderRadius.md,
+      gap: Spacing.xs,
+      ...Shadows.small,
+    },
+    editText: {
+      color: Colors.textWhite,
+      fontSize: FontSizes.sm,
+      fontFamily: Fonts.semiBold,
+    },
+    placeholderContent: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    placeholderText: {
+      fontSize: FontSizes.md,
+      fontFamily: Fonts.semiBold,
+      color: Colors.textSecondary,
+      marginTop: Spacing.md,
+    },
+    placeholderHint: {
+      fontSize: FontSizes.sm,
+      fontFamily: Fonts.regular,
+      color: Colors.textTertiary,
+      marginTop: Spacing.xs,
+    },
+    footer: {
+      paddingHorizontal: Spacing.xl,
+      paddingTop: Spacing.md,
+      paddingBottom: Spacing.xl,
+      borderTopWidth: 1,
+      borderTopColor: Colors.border,
+      backgroundColor: Colors.background,
+    },
+  });
