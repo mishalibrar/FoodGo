@@ -8,8 +8,19 @@ import {
 } from 'react-native';
 import React from 'react';
 import Feather from 'react-native-vector-icons/Feather';
+import { useNavigation } from '@react-navigation/native';
 
 const SuggestedRestaurantFlatlist = ({ data }) => {
+  const navigation = useNavigation();
+  
+  const handlePress = (item) => {
+    if (item.restaurant) {
+      navigation.navigate('RestaurantDetailScreen', {
+        restaurant: item.restaurant,
+      });
+    }
+  };
+
   return (
     <View
       style={{
@@ -22,7 +33,7 @@ const SuggestedRestaurantFlatlist = ({ data }) => {
         numColumns={1}
         scrollEnabled={false}
         renderItem={({ item }) => (
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => handlePress(item)}>
             <View
               style={{
                 flexDirection: 'row',
@@ -38,6 +49,7 @@ const SuggestedRestaurantFlatlist = ({ data }) => {
                   height: 50,
                   borderRadius: 12,
                 }}
+                defaultSource={require('../assets/images/suggested1.jpg')}
               />
               <View style={{ flexDirection: 'column', marginLeft: 10 }}>
                 <Text style={styles.FlatListtitlestyle}>{item.title}</Text>

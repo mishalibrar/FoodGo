@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   Image,
   StyleSheet,
   Text,
@@ -8,37 +7,39 @@ import {
   View,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { Eye, EyeOff } from 'lucide-react-native';
 import CustomTextInput from '../components/CustomTextInput';
 import CustomButton from '../components/CustomButton';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import CustomIcon from '../components/CustomIcon';
+import { useAlert } from '../context/AlertContext';
 
 const LoginScreen = () => {
   const navigation = useNavigation();
+  const { showAlert, showError } = useAlert();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSignIn = async () => {
     if (!email || !password) {
-      Alert.alert('Please fill all fields');
+      showAlert('Please fill all fields');
       return;
     }
 
     try {
-      const userCred = await auth().signInWithEmailAndPassword(email, password);
-      const uid = userCred.user.uid;
-      console.log(uid)
+      await auth().signInWithEmailAndPassword(email, password);
 
     } catch (error) {
       if (error.code === 'auth/user-not-found') {
-        Alert.alert('No account found with this email');
+        showError('No account found with this email');
       } else if (error.code === 'auth/wrong-password') {
-        Alert.alert('Incorrect password');
+        showError('Incorrect password');
       } else if (error.code === 'auth/invalid-email') {
-        Alert.alert('Invalid email format');
+        showError('Invalid email format');
       } else {
-        Alert.alert('Login failed', error.message);
+        showError('Login failed', error.message);
       }
     }
   };
@@ -68,12 +69,27 @@ const LoginScreen = () => {
           </View>
           <Text style={styles.emailtextstyle}>PASSWORD</Text>
           <View style={{ alignItems: 'center' }}>
-            <CustomTextInput
-              name="********"
-              color="#676767"
-              setState={setPassword}
-              secureTextEntry={true}
-            />
+            <View style={styles.passwordInputWrapper}>
+              <CustomTextInput
+                name="********"
+                color="#676767"
+                setState={setPassword}
+                secureTextEntry={!showPassword}
+                value={password}
+                style={styles.passwordInput}
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowPassword(!showPassword)}
+                activeOpacity={0.7}
+              >
+                {showPassword ? (
+                  <EyeOff size={20} color="#676767" />
+                ) : (
+                  <Eye size={20} color="#676767" />
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
           <View style={styles.forgotpasswordstyles}>
             <TouchableOpacity
@@ -83,7 +99,10 @@ const LoginScreen = () => {
             </TouchableOpacity>
           </View>
 
-          <CustomButton title="LOG IN" onPress={handleSignIn} />
+          <CustomButton 
+          title="LOG IN" 
+          onPress={handleSignIn} 
+          style={{ width: '90%', alignSelf: 'center', justifyContent: 'center', alignItems: 'center'}} />
 
           <View
             style={{
@@ -183,5 +202,20 @@ const styles = StyleSheet.create({
     padding: 15,
     marginBottom: 10,
     justifyContent: 'flex-end',
+  },
+  passwordInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '90%',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    paddingRight: 10,
+  },
+  passwordInput: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  eyeIcon: {
+    padding: 10,
   },
 });

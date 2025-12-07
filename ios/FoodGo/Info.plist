@@ -32,7 +32,9 @@
 		<true/>
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string/>
+	<string>FoodGo needs your location to show nearby restaurants and delivery options.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>FoodGo needs your location to show nearby restaurants and delivery options.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>

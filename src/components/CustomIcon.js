@@ -1,9 +1,14 @@
 import React from 'react';
 import { TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { Colors, BorderRadius, Spacing } from '../styles/globalStyles';
 
 const CustomIcon = ({ imageSource, onPress }) => {
   return (
-    <TouchableOpacity style={styles.iconButton} onPress={onPress}>
+    <TouchableOpacity 
+      style={styles.iconButton} 
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
       <Image
         source={imageSource}
         style={styles.iconImage}
@@ -17,12 +22,12 @@ export default CustomIcon;
 
 const styles = StyleSheet.create({
   iconButton: {
-    padding: 10,
+    padding: Spacing.md,
     borderWidth: 1,
-    borderColor: '#ebebeb',
-    borderRadius: 8,
-    marginHorizontal: 5,
-    backgroundColor:'#ebebeb'
+    borderColor: Colors.border,
+    borderRadius: BorderRadius.md,
+    marginHorizontal: Spacing.xs,
+    backgroundColor: Colors.backgroundLight,
   },
   iconImage: {
     width: 24,

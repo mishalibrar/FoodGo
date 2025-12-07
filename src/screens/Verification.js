@@ -31,21 +31,21 @@ const Verification = () => {
         <Text style={styles.examplestyle}>example@gmail.com</Text>
       </View>
       <View style={styles.whiteblockstyle}>
-        <View style={{ paddingTop: 20 , justifyContent:'center'}}>
+        <View style={{ paddingTop: 20, justifyContent: 'center' }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 19 }}>
             <Text style={styles.emailtextstyle}>CODE</Text>
-            <View style={{  flexDirection:'row', }}>
-            <TouchableOpacity>
-              <Text style={{ fontFamily: 'Sen-Bold', fontSize: 12 }}>
-                Resend
+            <View style={{ flexDirection: 'row', }}>
+              <TouchableOpacity>
+                <Text style={{ fontFamily: 'Sen-Bold', fontSize: 12 }}>
+                  Resend
+                </Text>
+              </TouchableOpacity>
+              <Text style={{ fontFamily: 'Sen-Regular', fontSize: 12 }}>
+                in.50 sec
               </Text>
-            </TouchableOpacity>
-            <Text style={{ fontFamily: 'Sen-Regular', fontSize: 12 }}>
-              in.50 sec
-            </Text>
             </View>
           </View>
-          <View style={{ flexDirection: 'row', justifyContent:'center' }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
             <TextInput
               placeholder="1"
               placeholderTextColor={'#A0A5BA'}
@@ -77,7 +77,7 @@ const Verification = () => {
           </View>
         </View>
         <View>
-          <CustomButton title="VERIFY" onPress={saveInfo} />
+          <CustomButton title="VERIFY" onPress={saveInfo} style={{ width: '90%', alignSelf: 'center', justifyContent: 'center', alignItems: 'center' }} />
         </View>
       </View>
     </View>
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginBottom: 4,
     marginLeft: 14,
-    
+
   },
   examplestyle: {
     fontFamily: 'Sen-Bold',

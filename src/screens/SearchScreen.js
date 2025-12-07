@@ -4,173 +4,341 @@ import {
   View,
   TouchableOpacity,
   FlatList,
-  Image,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
-import React ,{useState} from 'react';
-import Entypo from 'react-native-vector-icons/Entypo';
-import Feather from 'react-native-vector-icons/Feather';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Search } from 'lucide-react-native';
 import CustomTextInput from '../components/CustomTextInput';
 import { ShoppingBag } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
+import firestore from '@react-native-firebase/firestore';
 import SuggestedRestaurantFlatlist from '../components/SuggestedRestaurantFlatlist';
 import PopularFood from '../components/PopularFood';
+import { useCart } from '../context/CartContext';
+import { Colors, Fonts, FontSizes, Spacing, BorderRadius, Shadows } from '../styles/globalStyles';
 
 const SearchScreen = () => {
   const navigation = useNavigation();
-  const keywords = [
-    {
-      id: 1,
-      title: 'Burger',
-    },
-    {
-      id: 2,
-      title: 'Sandwich',
-    },
-    {
-      id: 3,
-      title: 'Pizza',
-    },
-    {
-      id: 4,
-      title: ' Fried Rice',
-    },
-    {
-      id: 5,
-      title: 'Tacos',
-    },
-    {
-      id: 6,
-      title: 'Ice Cream',
-    },
-    {
-      id: 7,
-      title: 'Smoothie',
-    },
-  ];
+  const { getCartCount } = useCart();
+  const cartCount = getCartCount();
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [keywords, setKeywords] = useState([]);
+  const [suggestedRestaurants, setSuggestedRestaurants] = useState([]);
+  const [popularItems, setPopularItems] = useState([]);
+  const [allRestaurants, setAllRestaurants] = useState([]);
+  const [allItems, setAllItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filteredRestaurants, setFilteredRestaurants] = useState([]);
+  const [filteredItems, setFilteredItems] = useState([]);
 
-  const Suggested = [
-    {
-      id: 1,
-      title: 'Pansi Restaurant',
-      ratings: 4.7,
-      img: require('../assets/images/suggested1.jpg'),
-    },
-    {
-      id: 2,
-      title: 'American Spicy Burger Shop',
-      ratings: 4.3,
-      img: require('../assets/images/suggested2.jpeg'),
-    },
-    {
-      id: 3,
-      title: 'Cafenio Coffee Club',
-      ratings: 4.1,
-      img: require('../assets/images/suggested3.jpg'),
-    },
-  ];
-  const Popular = [
-    {
-      id: 1,
-      title: 'European Pizza',
-      restaurant: 'Uttora Coffe House',
-      img: require('../assets/images/pizza.png'),
-    },
-    {
-      id: 2,
-      title: 'Buffalo Pizza',
-      restaurant: 'Cafenio Coffee Club',
-      img: require('../assets/images/pizza.png'),
-    },
-    {
-      id: 3,
-      title: 'Cheese Pizza',
-      restaurant: 'Uttora Coffe House',
-      img: require('../assets/images/pizza.png'),
-    },
-    {
-      id: 4,
-      title: 'Mexican Pizza',
-      restaurant: 'Cafenio Coffee Club',
-      img: require('../assets/images/pizza.png'),
-    },
-  ];
-  const [cartItems, setCartItems] = useState([
-    { id: 1, quantity: 2 },
-    { id: 2, quantity: 1 },
-  ]);
-  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  // Fetch restaurants and items
+  useEffect(() => {
+    let isMounted = true;
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch all restaurants
+        const restaurantsSnapshot = await firestore()
+          .collectionGroup('restaurants')
+          .get();
+
+        if (!isMounted) return;
+
+        const restaurantsData = restaurantsSnapshot.docs.map(doc => {
+          const adminId = doc.ref.parent.parent.id;
+          return {
+            id: doc.id,
+            adminId: adminId,
+            ...doc.data(),
+          };
+        });
+
+        // Get suggested restaurants (top 3 by rating or first 3)
+        const suggested = restaurantsData
+          .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+          .slice(0, 3)
+          .map(rest => ({
+            id: rest.id,
+            title: rest.name,
+            ratings: rest.rating || 4.0,
+            img: rest.imageUrl ? { uri: rest.imageUrl } : require('../assets/images/suggested1.jpg'),
+            restaurant: rest,
+          }));
+
+        // Fetch all items from all restaurants
+        const itemsPromises = restaurantsData.map(async (restaurant) => {
+          try {
+            const categoriesSnapshot = await firestore()
+              .collection('admins')
+              .doc(restaurant.adminId)
+              .collection('restaurants')
+              .doc(restaurant.id)
+              .collection('categories')
+              .get();
+
+            const itemsPromises = categoriesSnapshot.docs.map(async (catDoc) => {
+              const itemsSnapshot = await firestore()
+                .collection('admins')
+                .doc(restaurant.adminId)
+                .collection('restaurants')
+                .doc(restaurant.id)
+                .collection('categories')
+                .doc(catDoc.id)
+                .collection('items')
+                .get();
+
+              return itemsSnapshot.docs.map(itemDoc => ({
+                id: itemDoc.id,
+                adminId: restaurant.adminId,
+                restaurantId: restaurant.id,
+                categoryId: catDoc.id,
+                restaurantName: restaurant.name,
+                ...itemDoc.data(),
+              }));
+            });
+
+            const itemsArrays = await Promise.all(itemsPromises);
+            return itemsArrays.flat();
+          } catch (error) {
+            console.error(`Error fetching items for restaurant ${restaurant.id}:`, error);
+            return [];
+          }
+        });
+
+        const allItemsArrays = await Promise.all(itemsPromises);
+        const allItems = allItemsArrays.flat();
+
+        // Get popular items (top 4 by price or first 4)
+        const popular = allItems
+          .slice(0, 4)
+          .map(item => ({
+            id: item.id,
+            title: item.name,
+            restaurant: item.restaurantName,
+            img: item.imageUrl ? { uri: item.imageUrl } : require('../assets/images/pizza.png'),
+            item: item,
+          }));
+
+        // Extract unique keywords from category names and item names
+        const categoryNames = new Set();
+        const itemNames = new Set();
+        
+        restaurantsData.forEach(rest => {
+          // We'll fetch categories separately if needed
+        });
+
+        allItems.forEach(item => {
+          if (item.name) {
+            const words = item.name.split(' ').filter(w => w.length > 2);
+            words.forEach(word => itemNames.add(word));
+          }
+        });
+
+        const uniqueKeywords = Array.from(itemNames)
+          .slice(0, 7)
+          .map((keyword, index) => ({
+            id: index + 1,
+            title: keyword,
+          }));
+
+        if (isMounted) {
+          setSuggestedRestaurants(suggested);
+          setPopularItems(popular);
+          setKeywords(uniqueKeywords);
+          setAllRestaurants(restaurantsData);
+          setAllItems(allItems);
+        }
+      } catch (error) {
+        console.error('Error fetching search data:', error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Filter data based on search query
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredRestaurants([]);
+      setFilteredItems([]);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase().trim();
+    
+    // Filter all restaurants
+    const filtered = allRestaurants
+      .filter(rest => rest.name && rest.name.toLowerCase().includes(query))
+      .map(rest => ({
+        id: rest.id,
+        title: rest.name,
+        ratings: rest.rating || 4.0,
+        img: rest.imageUrl ? { uri: rest.imageUrl } : require('../assets/images/suggested1.jpg'),
+        restaurant: rest,
+      }));
+    setFilteredRestaurants(filtered);
+
+    // Filter all items
+    const filteredItemsList = allItems
+      .filter(item => 
+        (item.name && item.name.toLowerCase().includes(query)) ||
+        (item.restaurantName && item.restaurantName.toLowerCase().includes(query))
+      )
+      .map(item => ({
+        id: item.id,
+        title: item.name,
+        restaurant: item.restaurantName,
+        img: item.imageUrl ? { uri: item.imageUrl } : require('../assets/images/pizza.png'),
+        item: item,
+      }));
+    setFilteredItems(filteredItemsList);
+  }, [searchQuery, allRestaurants, allItems]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: 'white' }}>
+    <View style={styles.mainContainer}>
       {/* Header */}
-      <View style={styles.container}>
-        <View style={{ flexDirection: 'row' }}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <View style={styles.feathericon}>
-              <Entypo name="chevron-small-left" color="#181C2E" size={25} />
-            </View>
-          </TouchableOpacity>
-          <View style={{ marginLeft: 6, alignItems: 'center' }}>
-            <Text style={styles.searchtext}>Search</Text>
+      <View style={styles.headerContainer}>
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <View style={styles.backButton}>
+            <ArrowLeft size={22} color={Colors.textPrimary} strokeWidth={2.5} />
           </View>
-        </View>
-
-        <TouchableOpacity onPress={() => navigation.navigate('CartScreen')}>
-          <View style={styles.lucideicon}>
-            <ShoppingBag color="#ffffff" size={25} />
+        </TouchableOpacity>
+        
+        <Text style={styles.headerTitle}>Search</Text>
+        
+        <TouchableOpacity 
+          onPress={() => navigation.navigate('CartScreen')}
+          activeOpacity={0.7}
+          style={styles.cartButton}
+        >
+          <View style={styles.cartIconContainer}>
+            <ShoppingBag size={22} color={Colors.textWhite} strokeWidth={2} />
+            {cartCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{cartCount}</Text>
+              </View>
+            )}
           </View>
-          {cartCount > 0 && (
-            <View style={styles.badgeiconstyle}>
-              <Text
-                style={{ color: 'white', fontSize: 12, fontWeight: 'bold' }}
-              >
-                {cartCount}
-              </Text>
-            </View>
-          )}
         </TouchableOpacity>
       </View>
+
       {/* Search Box */}
-      <ScrollView>
-        <View style={styles.textboxstyle}>
-          <View style={{ justifyContent: 'center', marginLeft: 15 }}>
-            <Feather name="search" size={15} color="#A0A5BA" />
-          </View>
-          <CustomTextInput name="Search dishes, restaurants" color="#676767" />
-        </View>
-        {/* Recent Keyword Title */}
-        <View style={styles.headingstyle}>
-          <Text style={styles.Categoriestextstyle}>Recent Keywords</Text>
-        </View>
-        {/* Recent Keywords Flatlist */}
-        <View style={styles.Flatlistviewstyle}>
-          <FlatList
-            data={keywords}
-            horizontal
-            // scrollEnabled={false}
-            renderItem={({ item }) => (
-              <TouchableOpacity>
-                <View style={styles.CategoriesFlatliststyle}>
-                  <Text style={styles.FlatListtitlestyle}>{item.title}</Text>
-                </View>
-              </TouchableOpacity>
-            )}
-            keyExtractor={item => item.id.toString()}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchBox}>
+          <Search size={18} color={Colors.textTertiary} style={styles.searchIcon} />
+          <CustomTextInput 
+            name="Search dishes, restaurants" 
+            color={Colors.textTertiary}
+            value={searchQuery}
+            setState={setSearchQuery}
           />
         </View>
-        {/* Suggested Restaurants */}
-        <View style={styles.headingstyle}>
-          <Text style={styles.Categoriestextstyle}>Suggested Restaurants</Text>
-        </View>
-        {/* Suggested Restaurant flatlist */}
-        <SuggestedRestaurantFlatlist data={Suggested} />
-        {/* Popular Fast Food Heading */}
-        <View style={{ marginTop: 18, marginLeft: 18 }}>
-          <Text style={styles.Categoriestextstyle}>Popular Fast Food</Text>
-        </View>
-        {/* Popular Fast Food Flatlist  */}
-        <PopularFood data={Popular} />
+      </View>
+
+      {/* Content */}
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+          </View>
+        ) : (
+          <>
+            {!searchQuery ? (
+              <>
+                {/* Recent Keywords */}
+                {keywords.length > 0 && (
+                  <>
+                    <View style={styles.sectionHeader}>
+                      <Text style={styles.sectionTitle}>Recent Keywords</Text>
+                    </View>
+                    <FlatList
+                      data={keywords}
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.keywordsList}
+                      renderItem={({ item }) => (
+                        <TouchableOpacity 
+                          onPress={() => setSearchQuery(item.title)}
+                          activeOpacity={0.7}
+                        >
+                          <View style={styles.keywordChip}>
+                            <Text style={styles.keywordText}>{item.title}</Text>
+                          </View>
+                        </TouchableOpacity>
+                      )}
+                      keyExtractor={item => item.id.toString()}
+                    />
+                  </>
+                )}
+                
+                {/* Suggested Restaurants */}
+                {suggestedRestaurants.length > 0 && (
+                  <>
+                    <View style={styles.sectionHeader}>
+                      <Text style={styles.sectionTitle}>Suggested Restaurants</Text>
+                    </View>
+                    <SuggestedRestaurantFlatlist data={suggestedRestaurants} />
+                  </>
+                )}
+                
+                {/* Popular Fast Food */}
+                {popularItems.length > 0 && (
+                  <>
+                    <View style={styles.sectionHeader}>
+                      <Text style={styles.sectionTitle}>Popular Fast Food</Text>
+                    </View>
+                    <PopularFood data={popularItems} />
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                {/* Search Results */}
+                {filteredRestaurants.length > 0 && (
+                  <>
+                    <View style={styles.sectionHeader}>
+                      <Text style={styles.sectionTitle}>Restaurants</Text>
+                    </View>
+                    <SuggestedRestaurantFlatlist data={filteredRestaurants} />
+                  </>
+                )}
+                {filteredItems.length > 0 && (
+                  <>
+                    <View style={styles.sectionHeader}>
+                      <Text style={styles.sectionTitle}>Food Items</Text>
+                    </View>
+                    <PopularFood data={filteredItems} />
+                  </>
+                )}
+                {filteredRestaurants.length === 0 && filteredItems.length === 0 && (
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>No results found</Text>
+                    <Text style={styles.emptySubtext}>Try searching for something else</Text>
+                  </View>
+                )}
+              </>
+            )}
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -179,75 +347,143 @@ const SearchScreen = () => {
 export default SearchScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
+  mainContainer: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  headerContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.md,
+    backgroundColor: Colors.background,
   },
-  feathericon: {
-    backgroundColor: '#ECF0F4',
-    width: 45,
-    height: 45,
-    borderRadius: 25,
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.backgroundLight,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: 'black',
-    elevation: 7,
+    ...Shadows.small,
   },
-  lucideicon: {
+  headerTitle: {
+    fontSize: FontSizes.xxl,
+    fontFamily: Fonts.bold,
+    color: Colors.textPrimary,
+    flex: 1,
+    textAlign: 'center',
+    letterSpacing: 0.3,
+  },
+  cartButton: {
+    width: 40,
+    height: 40,
+  },
+  cartIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#181C2E',
-    width: 45,
-    height: 45,
-    borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
+    ...Shadows.small,
   },
-  searchtext: {
-    fontFamily: 'Sen-Regular',
-    fontSize: 17,
-    color: '#181C2E',
-    lineHeight: 22,
-    margin: 10,
-  },
-  textboxstyle: {
-    fontSize: 14,
-    fontFamily: 'Sen-Regular',
-    color: '#676767',
-    backgroundColor: '#F0F5FA',
-    width: '90%',
-    borderRadius: 10,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginLeft: 16,
-    // padding: 10,
-  },
-  Categoriestextstyle: {
-    fontFamily: 'Sen-Regular',
-    fontSize: 20,
-    color: '#32343E',
-  },
-  CategoriesFlatliststyle: {
-    borderWidth: 1,
-    borderColor: '#EDEDED',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 25,
-    paddingInline: 15,
-    paddingVertical: 10,
-    margin: 5,
-    left: 10,
-  },
-
-  headingstyle: { marginTop: 8, marginLeft: 18, marginBottom: 7 },
-  badgeiconstyle: {
+  badge: {
     position: 'absolute',
-    right: -5,
-    top: -5,
-    backgroundColor: '#FF7622',
+    right: 0,
+    top: 0,
+    backgroundColor: Colors.success,
     borderRadius: 10,
-    width: 20,
+    minWidth: 20,
     height: 20,
+    paddingHorizontal: 4,
     justifyContent: 'center',
     alignItems: 'center',
+    transform: [{ translateX: 5 }, { translateY: -5 }],
+    zIndex: 999999999,
+    ...Shadows.small,
+  },
+  badgeText: {
+    color: Colors.textWhite,
+    fontSize: FontSizes.xs,
+    fontFamily: Fonts.bold,
+  },
+  searchContainer: {
+    paddingHorizontal: Spacing.xl,
+    paddingBottom: Spacing.md,
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.backgroundLight,
+    borderRadius: BorderRadius.lg,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm - 10,
+    ...Shadows.small,
+  },
+  searchIcon: {
+    marginRight: Spacing.sm,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: Spacing.xl,
+  },
+  sectionHeader: {
+    paddingHorizontal: Spacing.xl,
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  sectionTitle: {
+    fontSize: FontSizes.xl,
+    fontFamily: Fonts.bold,
+    color: Colors.textPrimary,
+    letterSpacing: 0.2,
+  },
+  keywordsList: {
+    paddingHorizontal: Spacing.xl,
+    paddingBottom: Spacing.sm,
+  },
+  keywordChip: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.backgroundLight,
+    borderRadius: BorderRadius.round,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    marginRight: Spacing.sm,
+    ...Shadows.small,
+  },
+  keywordText: {
+    fontSize: FontSizes.sm,
+    fontFamily: Fonts.medium,
+    color: Colors.textSecondary,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: Spacing.xxxl,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xxxl * 2,
+    paddingHorizontal: Spacing.xl,
+  },
+  emptyText: {
+    fontSize: FontSizes.xl,
+    fontFamily: Fonts.bold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.xs,
+  },
+  emptySubtext: {
+    fontSize: FontSizes.md,
+    fontFamily: Fonts.regular,
+    color: Colors.textTertiary,
   },
 });

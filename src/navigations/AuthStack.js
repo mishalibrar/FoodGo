@@ -1,4 +1,10 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import IntroSlider from '../screens/IntroSlider';
+import LoginScreen from '../screens/LoginScreen';
+import ForgotPassword from '../screens/ForgotPassword';
+import Verification from '../screens/Verification';
+import SignUp from '../screens/SignUp';
+
 const Stack = createNativeStackNavigator();
 
 const AuthStack = () => (

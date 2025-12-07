@@ -1,34 +1,70 @@
-import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 import React from 'react';
+import { Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Colors, Fonts, FontSizes, BorderRadius, Spacing, Shadows } from '../styles/globalStyles';
 
-const CustomButton = ({ title, onPress, ...rest }) => {
+const CustomButton = ({ title, onPress, variant = 'primary', style, ...rest }) => {
+  const baseButtonStyle = variant === 'outline' 
+    ? styles.outlineButton
+    : styles.primaryButton;
+  
+  const buttonStyle = style 
+    ? [baseButtonStyle, style]
+    : baseButtonStyle;
+  
+  const textStyle = variant === 'outline'
+    ? styles.outlineButtonText
+    : styles.primaryButtonText;
+
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.8}
-      style={styles.buttonstyle}
+      style={buttonStyle}
       {...rest}
     >
-      <Text style={styles.buttontextstyle}>{title}</Text>
+      <Text style={textStyle}>{title}</Text>
     </TouchableOpacity>
   );
 };
 
-export default CustomButton;
-
 const styles = StyleSheet.create({
-  buttontextstyle: {
-    fontFamily: 'Sen-Bold',
-    fontSize: 14,
-    color: '#FFFFFF',
-    textAlign: 'center',
-    paddingVertical: 20,
+  primaryButton: {
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.primary,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    minHeight: 50,
+    marginVertical: Spacing.md,
+    ...Shadows.medium,
   },
-  buttonstyle: {
-    borderRadius: 12,
-    backgroundColor: '#FF7622',
-    width: '90%',
-    marginVertical: 10,
-    alignSelf: 'center',
+  primaryButtonText: {
+    fontFamily: Fonts.bold,
+    fontSize: FontSizes.md,
+    color: Colors.textWhite,
+    textAlign: 'center',
+  },
+  outlineButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    borderRadius: BorderRadius.lg,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    minHeight: 50,
+    marginVertical: Spacing.md,
+  },
+  outlineButtonText: {
+    fontFamily: Fonts.bold,
+    fontSize: FontSizes.md,
+    color: Colors.primary,
+    textAlign: 'center',
   },
 });
+
+export default CustomButton;

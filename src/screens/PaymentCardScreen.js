@@ -8,33 +8,15 @@ import {
   FlatList,
 } from 'react-native';
 import Entypo from 'react-native-vector-icons/Entypo';
-import CustomButton from '../components/Button';
+import CustomButton from '../components/CustomButton';
 import { useNavigation } from '@react-navigation/native';
+import { useCart } from '../context/CartContext';
+import { Spacing } from '../styles/globalStyles';
 
 const PaymentCardScreen = () => {
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      name: 'Pizza Calzone',
-      price: 64,
-      quantity: 1,
-      image: require('../assets/images/pizzacalzoneeuropean.jpg'),
-      size: '14"',
-    },
-    {
-      id: 2,
-      name: 'Veggie Delight',
-      price: 45,
-      quantity: 2,
-      image: require('../assets/images/veggiedelight.jpg'),
-      size: '14"',
-    },
-  ]);
-  const total = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0,
-  );
   const navigation = useNavigation();
+  const { cartItems, getCartTotal } = useCart();
+  const total = getCartTotal();
   const [selectedMethod, setSelectedMethod] = useState('Mastercard');
 
   const paymentMethods = [
@@ -127,12 +109,12 @@ const PaymentCardScreen = () => {
                 </View>
               </View>
 
-              <TouchableOpacity
-                style={styles.addButton}
+              <CustomButton
+                title="+ ADD NEW"
                 onPress={() => navigation.navigate('AddCardScreen')}
-              >
-                <Text style={styles.addButtonText}>+ ADD NEW</Text>
-              </TouchableOpacity>
+                variant="outline"
+                style={styles.addButton}
+              />
             </View>
           </>
         )}
@@ -142,32 +124,14 @@ const PaymentCardScreen = () => {
       <View>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Text style={styles.emailtextstyle}>TOTAL:</Text>
-          <Text style={styles.total}>${total}</Text>
+          <Text style={styles.total}>Rs {total}</Text>
         </View>
       </View>
-     <TouchableOpacity
-           onPress={() => navigation.navigate('PaymentSuccessfulScreen')}
-             style={{
-               borderRadius: 15,
-               alignItems: 'center',
-               borderRadius: 12,
-               padding: 5,
-               width: '97%',
-               backgroundColor: '#FF6A00',
-             }}
-           >
-             <Text
-               style={{
-                 color: 'white',
-                 fontFamily: 'Sen-Bold',
-                 fontSize: 14,
-                 textAlign: 'center',
-                 padding: 20,
-               }}
-             >
-               PAY & CONFIRM
-             </Text>
-           </TouchableOpacity>
+      <CustomButton
+        title="PAY & CONFIRM"
+        onPress={() => navigation.navigate('PaymentSuccessfulScreen')}
+        style={styles.payButton}
+      />
     </View>
   );
 };
@@ -264,21 +228,10 @@ const styles = StyleSheet.create({
     color: '#2D2D2D',
   },
   addButton: {
-    borderWidth: 2,
-    borderColor: '#F0F5FA',
-    borderRadius: 15,
-    alignItems: 'center',
-    borderRadius: 12,
-    padding: 5,
-    width: '98%',
-    // marginLeft: 15,
+    marginTop: Spacing.md,
   },
-  addButtonText: {
-    color: '#FF6A00',
-    fontFamily: 'Sen-Bold',
-    fontSize: 14,
-    textAlign: 'center',
-    padding: 20,
+  payButton: {
+    marginTop: Spacing.md,
   },
 
   feathericon: {

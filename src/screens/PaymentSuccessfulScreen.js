@@ -1,7 +1,9 @@
-import { Image, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import React from 'react';
 import { SafeAreaView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import CustomButton from '../components/CustomButton';
+import { Spacing } from '../styles/globalStyles';
 
 const PaymentSuccessfulScreen = () => {
   const navigation = useNavigation();
@@ -33,38 +35,13 @@ const PaymentSuccessfulScreen = () => {
           </Text>
         </View>
         <View
-          style={{
-            backgroundColor: 'green',
-            justifyContent: 'flex-end',
-            alignItems: 'center',
-          }}
+          style={styles.buttonContainer}
         >
-          <TouchableOpacity
-             onPress={() => navigation.goBack()}
-            style={{
-              borderRadius: 15,
-              alignItems: 'center',
-              borderRadius: 12,
-              padding: 5,
-              width: '97%',
-              backgroundColor: '#FF6A00',
-              justifyContent: 'center',
-              position: 'absolute',
-              top: 50,
-            }}
-          >
-            <Text
-              style={{
-                color: 'white',
-                fontFamily: 'Sen-Bold',
-                fontSize: 14,
-                textAlign: 'center',
-                padding: 20,
-              }}
-            >
-              TRACK ORDER
-            </Text>
-          </TouchableOpacity>
+          <CustomButton
+            title="TRACK ORDER"
+            onPress={() => navigation.goBack()}
+            style={styles.trackButton}
+          />
         </View>
       </View>
     </SafeAreaView>
@@ -98,5 +75,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'white',
+  },
+  trackButton: {
+    position: 'absolute',
+    top: 50,
+  },
+  buttonContainer: {
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

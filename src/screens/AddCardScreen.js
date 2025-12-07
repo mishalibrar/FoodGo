@@ -5,7 +5,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  TextInput,
 } from 'react-native';
 import Entypo from 'react-native-vector-icons/Entypo';
 import CustomTextInput from '../components/CustomTextInput';
@@ -32,37 +31,23 @@ const AddCardScreen = () => {
       <View style={{ marginBottom: 10 }}>
         <Text style={styles.emailtextstyle}>CARD HOLDER NAME</Text>
         <View style={{ alignItems: 'center' }}>
-          <TextInput
-            placeholder="Mishal Ibrar"
-            placeholderTextColor={'#676767'}
+          <CustomTextInput
+            name="Mishal Ibrar"
+            color="#676767"
             setState={setCardHolderName}
-            style={{
-              fontSize: 14,
-              fontFamily: 'Sen-Regular',
-              backgroundColor: '#F0F5FA',
-              width: '97%',
-              padding: 20,
-              borderRadius: 10,
-            }}
+            style={styles.inputFull}
           />
         </View>
       </View>
       <View style={{ marginBottom: 10 }}>
         <Text style={styles.emailtextstyle}>CARD NUMBER</Text>
         <View style={{ alignItems: 'center' }}>
-          <TextInput
-            placeholder="2134   _ _ _ _   _ _ _ _"
-            placeholderTextColor={'#676767'}
+          <CustomTextInput
+            name="2134   _ _ _ _   _ _ _ _"
+            color="#676767"
             setState={setCardNumber}
-            keyboardType={'numeric'}
-            style={{
-              fontSize: 14,
-              fontFamily: 'Sen-Regular',
-              backgroundColor: '#F0F5FA',
-              width: '97%',
-              padding: 20,
-              borderRadius: 10,
-            }}
+            keyboardType="numeric"
+            style={styles.inputFull}
           />
         </View>
       </View>
@@ -77,68 +62,34 @@ const AddCardScreen = () => {
         <View style={{ marginBottom: 10 }}>
           <Text style={styles.emailtextstyle}>EXPIRE DATE</Text>
           <View style={{ alignItems: 'center' }}>
-            <TextInput
-              placeholder="mm/yyyy"
-              placeholderTextColor={'#676767'}
+            <CustomTextInput
+              name="mm/yyyy"
+              color="#676767"
               setState={setExpireDate}
-              keyboardType={'numeric'}
-              style={{
-                fontSize: 14,
-                fontFamily: 'Sen-Regular',
-                backgroundColor: '#F0F5FA',
-                width: 150,
-                padding: 20,
-                borderRadius: 10,
-                marginLeft: 6,
-              }}
+              keyboardType="numeric"
+              style={[styles.inputHalf, styles.inputLeft]}
             />
           </View>
         </View>
         <View style={{ marginBottom: 10 }}>
           <Text style={styles.emailtextstyle}>CVC</Text>
           <View style={{ alignItems: 'center' }}>
-            <TextInput
-              placeholder="***"
-              placeholderTextColor={'#676767'}
+            <CustomTextInput
+              name="***"
+              color="#676767"
               setState={setCVC}
-              keyboardType={'numeric'}
-              style={{
-                fontSize: 14,
-                fontFamily: 'Sen-Regular',
-                backgroundColor: '#F0F5FA',
-                width: 150,
-                padding: 20,
-                borderRadius: 10,
-              }}
+              keyboardType="numeric"
+              style={styles.inputHalf}
             />
           </View>
         </View>
       </View>
-      <View style={{flex:1,  justifyContent:'flex-end'}}>
-        <TouchableOpacity
+      <View style={styles.buttonContainer}>
+        <CustomButton
+          title="ADD & MAKE PAYMENTS"
           onPress={() => navigation.navigate('PaymentCardScreen')}
-          style={{
-            borderRadius: 15,
-            alignItems: 'center',
-            borderRadius: 12,
-            padding: 5,
-            width: '97%',
-            backgroundColor: '#FF6A00',
-            marginLeft: 6,
-          }}
-        >
-          <Text
-            style={{
-              color: 'white',
-              fontFamily: 'Sen-Bold',
-              fontSize: 14,
-              textAlign: 'center',
-              padding: 20,
-            }}
-          >
-            ADD & MAKE PAYMENTS
-          </Text>
-        </TouchableOpacity>
+          style={styles.addButton}
+        />
       </View>
     </View>
   );
@@ -179,5 +130,22 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     marginLeft: 9,
     marginBottom: 6,
+  },
+  inputFull: {
+    width: '97%',
+  },
+  inputHalf: {
+    width: 150,
+  },
+  inputLeft: {
+    marginLeft: 6,
+  },
+  buttonContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    paddingBottom: 10,
+  },
+  addButton: {
+    marginVertical: 0,
   },
 });
