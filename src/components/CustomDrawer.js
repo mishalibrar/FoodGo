@@ -18,7 +18,7 @@ import { useAlert } from '../context/AlertContext';
 import { useFavorites } from '../context/FavoritesContext';
 
 const CustomDrawer = props => {
-  const { showAlert, showError } = useAlert();
+  const { showAlert, showError, hideAlert } = useAlert();
   const { favoriteRestaurants, favoriteProducts } = useFavorites();
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -70,11 +70,18 @@ const CustomDrawer = props => {
       'Logout',
       'Are you sure you want to logout?',
       [
-        { text: 'Cancel' },
+        { 
+          text: 'Cancel',
+          onPress: () => {
+            hideAlert();
+          }
+        },
         {
           text: 'Logout',
           onPress: async () => {
             try {
+              // Hide alert before signing out
+              hideAlert();
               await auth().signOut();
             } catch (error) {
               console.error('Error signing out:', error);

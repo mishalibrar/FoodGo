@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Modal from 'react-native-modal';
 import { AlertCircle, CheckCircle, Info, AlertTriangle, X } from 'lucide-react-native';
@@ -49,14 +49,41 @@ const CustomAlertModal = ({
     }
   };
 
+  // Ensure modal closes when visible becomes false
+  useEffect(() => {
+    if (!visible) {
+      // Modal should be hidden
+      return;
+    }
+  }, [visible]);
+
+  // Cleanup on unmount - ensure modal is closed
+  useEffect(() => {
+    return () => {
+      if (visible) {
+        onClose();
+      }
+    };
+  }, [visible, onClose]);
+
   return (
     <Modal
       isVisible={visible}
       onBackdropPress={onClose}
       onBackButtonPress={onClose}
+      onModalHide={() => {
+        // Ensure modal is properly closed
+        if (visible) {
+          onClose();
+        }
+      }}
       animationIn="fadeIn"
       animationOut="fadeOut"
       style={styles.modal}
+      useNativeDriverForBackdrop={true}
+      onSwipeComplete={onClose}
+      swipeDirection="down"
+      propagateSwipe={true}
     >
       <View style={styles.container}>
         <TouchableOpacity
@@ -175,7 +202,6 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     backgroundColor: Colors.primary,
-    ...Shadows.small,
   },
   secondaryButton: {
     backgroundColor: Colors.backgroundLight,

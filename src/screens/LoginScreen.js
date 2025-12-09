@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Eye, EyeOff } from 'lucide-react-native';
 import CustomTextInput from '../components/CustomTextInput';
 import CustomButton from '../components/CustomButton';
@@ -14,24 +14,53 @@ import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import CustomIcon from '../components/CustomIcon';
 import { useAlert } from '../context/AlertContext';
+import { useCallback } from 'react';
 
 const LoginScreen = () => {
   const navigation = useNavigation();
-  const { showAlert, showError } = useAlert();
+  const { showAlert, showError, hideAlert } = useAlert();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
+  // Hide alerts when screen loses focus
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        // Hide alert when navigating away from this screen
+        hideAlert();
+      };
+    }, [hideAlert])
+  );
+
   const handleSignIn = async () => {
+    console.log('🔵 [LoginScreen] handleSignIn called');
+    console.log('🔵 [LoginScreen] Email:', email);
+    console.log('🔵 [LoginScreen] Password length:', password.length);
+    
     if (!email || !password) {
+      console.log('❌ [LoginScreen] Validation failed: Missing email or password');
       showAlert('Please fill all fields');
       return;
     }
 
     try {
-      await auth().signInWithEmailAndPassword(email, password);
+      console.log('🟡 [LoginScreen] Attempting to sign in with Firebase Auth...');
+      const userCredential = await auth().signInWithEmailAndPassword(email, password);
+      console.log('✅ [LoginScreen] Firebase Auth sign-in successful!');
+      console.log('✅ [LoginScreen] User UID:', userCredential.user.uid);
+      console.log('✅ [LoginScreen] User Email:', userCredential.user.email);
+      console.log('🟡 [LoginScreen] Waiting for auth state change to trigger navigation...');
+      
+      // Check current auth state
+      const currentUser = auth().currentUser;
+      console.log('🔵 [LoginScreen] Current auth user:', currentUser ? currentUser.uid : 'null');
 
     } catch (error) {
+      console.error('❌ [LoginScreen] Sign-in error:', error);
+      console.error('❌ [LoginScreen] Error code:', error.code);
+      console.error('❌ [LoginScreen] Error message:', error.message);
+      
       if (error.code === 'auth/user-not-found') {
         showError('No account found with this email');
       } else if (error.code === 'auth/wrong-password') {

@@ -5,7 +5,8 @@ import {
   View,
   TouchableOpacity,
 } from 'react-native';
-import React, { useState } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Eye, EyeOff } from 'lucide-react-native';
 import CustomTextInput from '../components/CustomTextInput';
 import CustomButton from '../components/CustomButton';
@@ -14,7 +15,10 @@ import firestore from '@react-native-firebase/firestore';
 import { useAlert } from '../context/AlertContext';
 
 const SignUp = () => {
-  const { showAlert, showError, showSuccess } = useAlert();
+  const navigation = useNavigation();
+  const { showAlert, showError, showSuccess, hideAlert } = useAlert();
+  const navigationTimeoutRef = useRef(null);
+  const isNavigatingRef = useRef(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -23,26 +27,55 @@ const SignUp = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Hide alerts when screen loses focus
+  useFocusEffect(
+    useCallback(() => {
+      // Reset navigation flag when screen is focused
+      isNavigatingRef.current = false;
+      
+      return () => {
+        // Clear navigation timeout and hide alert when navigating away from this screen
+        if (navigationTimeoutRef.current) {
+          clearTimeout(navigationTimeoutRef.current);
+          navigationTimeoutRef.current = null;
+        }
+        isNavigatingRef.current = false;
+        hideAlert();
+      };
+    }, [hideAlert])
+  );
+
   const handleSignUp = async () => {
+    console.log('🔵 [SignUp] handleSignUp called');
+    console.log('🔵 [SignUp] Name:', name);
+    console.log('🔵 [SignUp] Email:', email);
+    console.log('🔵 [SignUp] Role:', role);
+    console.log('🔵 [SignUp] Password length:', password.length);
+    
     if (!name || !email || !password || !confirmPassword) {
+      console.log('❌ [SignUp] Validation failed: Missing fields');
       showAlert('Fill all fields!');
       return;
     }
     if (password.length < 8) {
+      console.log('❌ [SignUp] Validation failed: Password too short');
       showAlert('Password must be at least 8 characters');
       return;
     }
     if (password !== confirmPassword) {
+      console.log('❌ [SignUp] Validation failed: Passwords do not match');
       showAlert('Passwords must match!');
       return;
     }
 
     try {
+      console.log('🟡 [SignUp] Creating user account with Firebase Auth...');
       const userCred = await auth().createUserWithEmailAndPassword(
         email,
         password,
       );
       const uid = userCred.user.uid;
+      console.log('✅ [SignUp] User account created! UID:', uid);
 
       const data = {
         name,
@@ -51,15 +84,127 @@ const SignUp = () => {
         createdAt: firestore.FieldValue.serverTimestamp(),
       };
       
+      console.log('🔵 [SignUp] Saving user data to Firestore...');
+      console.log('🔵 [SignUp] Collection:', role === 'admin' ? 'admins' : 'users');
+      console.log('🔵 [SignUp] Data to save:', { ...data, createdAt: 'serverTimestamp' });
+      
       if (role === 'admin') {
         await firestore().collection('admins').doc(uid).set(data);
+        console.log('✅ [SignUp] Admin data saved to Firestore');
       } else {
         await firestore().collection('users').doc(uid).set(data);
+        console.log('✅ [SignUp] User data saved to Firestore');
       }
 
-      showSuccess('Success', 'Account created successfully!');
+      // Verify the data was saved
+      const verifyDoc = role === 'admin' 
+        ? await firestore().collection('admins').doc(uid).get()
+        : await firestore().collection('users').doc(uid).get();
+      
+      if (verifyDoc.exists) {
+        console.log('✅ [SignUp] Verified: Document exists in Firestore');
+        console.log('✅ [SignUp] Verified data:', verifyDoc.data());
+      } else {
+        console.error('❌ [SignUp] ERROR: Document not found after saving!');
+        throw new Error('Failed to save user data to Firestore');
+      }
+
+      // Wait a moment to ensure Firestore write is fully committed
+      await new Promise(resolve => setTimeout(resolve, 500));
+      console.log('🔵 [SignUp] Firestore write confirmed, proceeding...');
+
+      // Sign out the user so they can log in with their selected role
+      console.log('🔵 [SignUp] Signing out user...');
+      await auth().signOut();
+      console.log('✅ [SignUp] User signed out');
+
+      // Wait a moment for auth state to update
+      await new Promise(resolve => setTimeout(resolve, 300));
+      console.log('🔵 [SignUp] Auth state updated, showing success message...');
+
+      // Clear any existing navigation timeout
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current);
+        navigationTimeoutRef.current = null;
+      }
+
+      // Function to navigate to login screen
+      const navigateToLogin = () => {
+        // Prevent multiple navigation attempts
+        if (isNavigatingRef.current) {
+          console.log('🔵 [SignUp] Navigation already in progress, skipping...');
+          return;
+        }
+        
+        isNavigatingRef.current = true;
+        console.log('🔵 [SignUp] Navigating to LoginScreen...');
+        
+        if (navigationTimeoutRef.current) {
+          clearTimeout(navigationTimeoutRef.current);
+          navigationTimeoutRef.current = null;
+        }
+        
+        hideAlert();
+        
+        // Small delay to ensure alert closes smoothly before navigation
+        setTimeout(() => {
+          try {
+            console.log('🔵 [SignUp] Executing navigation to LoginScreen');
+            navigation.navigate('LoginScreen');
+            console.log('✅ [SignUp] Navigation to LoginScreen completed');
+          } catch (error) {
+            console.error('❌ [SignUp] Navigation error:', error);
+            isNavigatingRef.current = false;
+          }
+        }, 200);
+      };
+
+      // Show success message
+      console.log('🔵 [SignUp] Showing success alert...');
+      showSuccess(
+        'Account Created!',
+        `Your ${role} account has been created successfully. Please log in to continue.`,
+        [
+          {
+            text: 'Go to Login',
+            onPress: () => {
+              console.log('🔵 [SignUp] User clicked "Go to Login" button');
+              navigateToLogin();
+            },
+          },
+        ]
+      );
+
+      // Auto-navigate to login screen after 4 seconds if user doesn't click button
+      console.log('🔵 [SignUp] Setting auto-navigation timeout (4 seconds)...');
+      navigationTimeoutRef.current = setTimeout(() => {
+        console.log('🔵 [SignUp] Auto-navigation timeout triggered');
+        navigateToLogin();
+      }, 4000);
     } catch (error) {
-      showError('Sign Up Failed', error.message);
+      console.error('❌ [SignUp] Sign up error:', error);
+      console.error('❌ [SignUp] Error code:', error.code);
+      console.error('❌ [SignUp] Error message:', error.message);
+      
+      // Reset navigation flag on error
+      isNavigatingRef.current = false;
+      
+      // Clear any pending navigation
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current);
+        navigationTimeoutRef.current = null;
+      }
+      
+      // Handle specific Firebase errors
+      if (error.code === 'auth/email-already-in-use') {
+        showError('Email Already Exists', 'This email is already registered. Please use a different email or try logging in.');
+      } else if (error.code === 'auth/weak-password') {
+        showError('Weak Password', 'Password is too weak. Please use a stronger password.');
+      } else if (error.code === 'auth/invalid-email') {
+        showError('Invalid Email', 'Please enter a valid email address.');
+      } else {
+        showError('Sign Up Failed', error.message || 'An error occurred during sign up. Please try again.');
+      }
     }
   };
 
