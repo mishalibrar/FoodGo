@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import auth from '@react-native-firebase/auth';
 import CustomAlertModal from '../components/CustomAlertModal';
 
 const AlertContext = createContext();
@@ -19,8 +20,15 @@ export const AlertProvider = ({ children }) => {
     type: 'info',
     buttons: [{ text: 'OK', onPress: () => {} }],
   });
+  const timeoutRef = useRef(null);
 
   const showAlert = useCallback((title, message, buttons, type = 'info') => {
+    // Clear any existing timeout and hide previous alert
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    
     // Handle Alert.alert format: Alert.alert(title, message, buttons)
     // Or single param: Alert.alert(message)
     let alertTitle = null;
@@ -83,7 +91,79 @@ export const AlertProvider = ({ children }) => {
   }, []);
 
   const hideAlert = useCallback(() => {
+    // Clear any existing timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
     setAlert(prev => ({ ...prev, visible: false }));
+  }, []);
+
+  // Reset alert state completely
+  const resetAlert = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setAlert({
+      visible: false,
+      title: null,
+      message: null,
+      type: 'info',
+      buttons: [{ text: 'OK', onPress: () => {} }],
+    });
+  }, []);
+
+  // Listen to auth state changes to reset alerts (e.g., on logout)
+  useEffect(() => {
+    const unsubscribe = auth().onAuthStateChanged((user) => {
+      // Reset alert when auth state changes (login/logout)
+      resetAlert();
+    });
+
+    return unsubscribe;
+  }, [resetAlert]);
+
+  // Auto-hide alert after 5 seconds if no buttons are pressed
+  // Skip auto-hide if alert has custom buttons (user should interact with them)
+  useEffect(() => {
+    if (alert.visible) {
+      // Clear any existing timeout
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      
+      // Only auto-hide if there's a single default "OK" button
+      // If there are custom buttons, don't auto-hide (let user interact)
+      const hasCustomButtons = alert.buttons && alert.buttons.length > 0 && 
+        (alert.buttons.length > 1 || 
+         (alert.buttons[0] && alert.buttons[0].text !== 'OK' && alert.buttons[0].onPress));
+      
+      if (!hasCustomButtons) {
+        // Set new timeout to auto-hide after 5 seconds for simple alerts
+        timeoutRef.current = setTimeout(() => {
+          hideAlert();
+        }, 5000);
+      } else {
+        console.log('🔵 [AlertContext] Alert has custom buttons, skipping auto-hide');
+      }
+
+      return () => {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
+      };
+    }
+  }, [alert.visible, alert.buttons, hideAlert]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
   }, []);
 
   // Helper methods for different alert types
@@ -108,6 +188,7 @@ export const AlertProvider = ({ children }) => {
       value={{
         showAlert,
         hideAlert,
+        resetAlert,
         showSuccess,
         showError,
         showWarning,

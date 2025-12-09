@@ -179,7 +179,7 @@ const AddRestaurantModal = ({ isVisible, onClose, onSave, adminUid, initialLocat
           keyboardShouldPersistTaps="handled"
         >
           {/* Image Picker */}
-          <View style={styles.section}>
+          <View style={styles.sectionimagepicker}>
             <Text style={styles.label}>Restaurant Image</Text>
             <TouchableOpacity 
               style={[
@@ -337,7 +337,12 @@ const styles = StyleSheet.create({
   section: {
     paddingHorizontal: Spacing.xl,
     marginTop: Spacing.lg,
+    width: '110%',
   },
+  sectionimagepicker: {
+    paddingHorizontal: Spacing.xl,
+    marginTop: Spacing.lg,
+  },  
   label: {
     fontFamily: Fonts.semiBold,
     fontSize: FontSizes.sm,

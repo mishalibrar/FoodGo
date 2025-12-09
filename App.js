@@ -26,8 +26,14 @@ const App = () => {
   }, []);
 
   useEffect(() => {
+    console.log('🔵 [App] Setting up auth state listener...');
+    
     const unsubscribe = auth().onAuthStateChanged(async currentUser => {
+      console.log('🟢 [App] Auth state changed!');
+      console.log('🟢 [App] Current user:', currentUser ? currentUser.uid : 'null');
+      
       if (!currentUser) {
+        console.log('🔵 [App] No user logged in, setting role to null');
         setRole(null);
         setLoading(false);
         return;
@@ -35,25 +41,52 @@ const App = () => {
 
       try {
         const uid = currentUser.uid;
+        console.log('🔵 [App] User logged in, UID:', uid);
+        console.log('🔵 [App] Checking user role in Firestore...');
+        
         let detectedRole = null;
 
+        console.log('🔵 [App] Checking admins collection...');
         const adminDoc = await firestore().collection('admins').doc(uid).get();
-        if (adminDoc.exists && adminDoc.data()?.role === 'admin') {
-          detectedRole = 'admin';
-        }
-
-        if (!detectedRole) {
-          const userDoc = await firestore().collection('users').doc(uid).get();
-          if (userDoc.exists && userDoc.data()?.role === 'user') {
-            detectedRole = 'user';
+        console.log('🔵 [App] Admin doc exists:', adminDoc.exists);
+        if (adminDoc.exists) {
+          const adminData = adminDoc.data();
+          console.log('🔵 [App] Admin doc data:', adminData);
+          console.log('🔵 [App] Admin role:', adminData?.role);
+          if (adminData?.role === 'admin') {
+            detectedRole = 'admin';
+            console.log('✅ [App] Role detected: ADMIN');
           }
         }
 
+        if (!detectedRole) {
+          console.log('🔵 [App] Not an admin, checking users collection...');
+          const userDoc = await firestore().collection('users').doc(uid).get();
+          console.log('🔵 [App] User doc exists:', userDoc.exists);
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            console.log('🔵 [App] User doc data:', userData);
+            console.log('🔵 [App] User role:', userData?.role);
+            if (userData?.role === 'user') {
+              detectedRole = 'user';
+              console.log('✅ [App] Role detected: USER');
+            }
+          }
+        }
+
+        if (!detectedRole) {
+          console.warn('⚠️ [App] No role found for user! User might not be in Firestore.');
+          console.warn('⚠️ [App] UID:', uid);
+        }
+
+        console.log('🔵 [App] Final detected role:', detectedRole);
         setRole(detectedRole);
       } catch (error) {
-        console.error('Error fetching role:', error);
+        console.error('❌ [App] Error fetching role:', error);
+        console.error('❌ [App] Error details:', error.message);
         setRole(null);
       } finally {
+        console.log('🔵 [App] Setting loading to false');
         setLoading(false);
       }
     });
@@ -61,13 +94,26 @@ const App = () => {
     return unsubscribe;
   }, []);
 
+  console.log('🔵 [App] Render - Loading:', loading, 'Splash:', splash, 'Role:', role);
+
   if (loading) {
+    console.log('🟡 [App] Showing loading indicator');
     return (
       <View style={CommonStyles.loadingContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
   }
+
+  console.log('🔵 [App] Rendering navigation stack');
+  console.log('🔵 [App] Splash:', splash);
+  console.log('🔵 [App] Role:', role);
+  console.log('🔵 [App] Selected stack:', 
+    splash ? 'Splash' : 
+    role === 'admin' ? 'AdminStack' : 
+    role === 'user' ? 'UserStack' : 
+    'AuthStack'
+  );
 
   return (
     <AlertProvider>
